@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traducteur de PDF — Bêta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<style>
+  :root{
+    --desk:#0F212C;
+    --desk-2:#173042;
+    --paper:#F6F1E4;
+    --paper-2:#EFE8D6;
+    --ink:#211D16;
+    --ink-soft:#5B5546;
+    --stamp:#B23B32;
+    --stamp-dark:#7E2A24;
+    --line:#D9D0B8;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, var(--desk-2), transparent 60%),
+      var(--desk);
+    font-family:'IBM Plex Sans', sans-serif;
+    color:var(--ink);
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:56px 20px;
+  }
+  .sheet{
+    position:relative;
+    width:100%;
+    max-width:560px;
+    background:var(--paper);
+    border-radius:3px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.4) inset,
+      0 30px 70px rgba(0,0,0,.45),
+      0 8px 20px rgba(0,0,0,.3);
+    padding:52px 44px 40px;
+  }
+  .sheet::before{ /* bord "papier déchiré" léger, en haut */
+    content:"";
+    position:absolute; top:0; left:0; right:0; height:6px;
+    background:repeating-linear-gradient(90deg, var(--paper) 0 10px, var(--paper-2) 10px 12px);
+    border-radius:3px 3px 0 0;
+  }
+  .stamp{
+    position:absolute;
+    top:-22px;
+    right:34px;
+    width:118px;
+    height:118px;
+    border-radius:50%;
+    border:3px double var(--stamp);
+    color:var(--stamp);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    transform:rotate(-11deg);
+    mix-blend-mode:multiply;
+    opacity:.88;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.62rem;
+    letter-spacing:.14em;
+    line-height:1.3;
+    text-transform:uppercase;
+    padding:10px;
+    pointer-events:none;
+    user-select:none;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.72rem;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin:0 0 10px;
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:2.05rem;
+    line-height:1.12;
+    margin:0 0 8px;
+    letter-spacing:-.01em;
+  }
+  p.sub{
+    color:var(--ink-soft);
+    font-size:.94rem;
+    line-height:1.5;
+    margin:0 0 34px;
+    max-width:42ch;
+  }
+  .dropzone{
+    border:1.5px dashed var(--line);
+    border-radius:2px;
+    padding:26px 20px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .15s, background .15s;
+    background:rgba(255,255,255,.25);
+  }
+  .dropzone:hover, .dropzone.drag{
+    border-color:var(--stamp);
+    background:rgba(178,59,50,.05);
+  }
+  .dropzone input{display:none;}
+  .dropzone .fname{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.82rem;
+    color:var(--ink);
+    margin-top:6px;
+    word-break:break-all;
+  }
+  .dz-label{font-size:.9rem; color:var(--ink-soft);}
+  .row{display:flex; gap:14px; margin-top:22px;}
+  .field{flex:1;}
+  label.field-label{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.68rem;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-bottom:7px;
+  }
+  select{
+    width:100%;
+    padding:11px 10px;
+    border:1px solid var(--line);
+    border-radius:2px;
+    background:#fff;
+    color:var(--ink);
+    font-size:.9rem;
+    font-family:'IBM Plex Sans', sans-serif;
+  }
+  button.go{
+    margin-top:28px;
+    width:100%;
+    padding:15px;
+    border:none;
+    border-radius:2px;
+    background:var(--stamp);
+    color:#fff;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.85rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:background .15s;
+  }
+  button.go:hover:not(:disabled){background:var(--stamp-dark);}
+  button.go:disabled{opacity:.45; cursor:not-allowed;}
+
+  .status{
+    margin-top:18px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:.78rem;
+    color:var(--ink-soft);
+    min-height:18px;
+  }
+  .bar{
+    margin-top:8px;
+    height:3px;
+    width:100%;
+    background:var(--line);
+    border-radius:2px;
+    overflow:hidden;
+  }
+  .bar-fill{
+    height:100%;
+    width:0%;
+    background:var(--stamp);
+    transition:width .2s;
+  }
+  .note{
+    margin-top:30px;
+    padding-top:18px;
+    border-top:1px solid var(--line);
+    font-size:.76rem;
+    color:var(--ink-soft);
+    line-height:1.6;
+  }
+  .note b{color:var(--ink);}
+</style>
+</head>
+<body>
+
+<div class="sheet">
+  <div class="stamp">Bêta<br>traduction<br>auto</div>
+
+  <p class="eyebrow">Atelier de traduction</p>
+  <h1>Traduire un PDF</h1>
+  <p class="sub">Tout se passe dans votre navigateur — aucun fichier n'est envoyé à un serveur. Seul le texte extrait part vers le service de traduction.</p>
+
+  <div class="dropzone" id="dz">
+    <div class="dz-label">Cliquez, ou déposez un PDF ici</div>
+    <div class="fname" id="fname"></div>
+    <input type="file" id="file" accept="application/pdf">
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label class="field-label">Langue source</label>
+      <select id="source">
+        <option value="auto">Détection auto</option>
+      </select>
+    </div>
+    <div class="field">
+      <label class="field-label">Langue cible</label>
+      <select id="target"></select>
+    </div>
+  </div>
+
+  <button class="go" id="go" disabled>Traduire le PDF</button>
+
+  <div class="status" id="status"></div>
+  <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+
+  <div class="note">
+    <b>Bêta :</b> la traduction passe par des miroirs publics LibreTranslate, gratuits et sans clé, mais gérés bénévolement — en cas de forte charge, une traduction peut échouer et le texte original est alors conservé tel quel. Le document final est reconstruit page par page à partir d'une image — le texte redevient une image, non copiable. La couleur du texte n'est pas préservée (rendu en noir). Sur des documents longs, comptez plusieurs minutes : chaque bloc de texte est traduit séparément.
+  </div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+const LANGUAGES = {
+  fr:"Français", en:"Anglais", es:"Espagnol", de:"Allemand", pt:"Portugais",
+  it:"Italien", ar:"Arabe", zh:"Chinois", ja:"Japonais", ru:"Russe",
+  nl:"Néerlandais"
+};
+
+const sourceSel = document.getElementById('source');
+const targetSel = document.getElementById('target');
+for (const [code, name] of Object.entries(LANGUAGES)) {
+  sourceSel.add(new Option(name, code));
+  targetSel.add(new Option(name, code));
+}
+targetSel.value = 'en';
+
+const dz = document.getElementById('dz');
+const fileInput = document.getElementById('file');
+const fnameEl = document.getElementById('fname');
+const goBtn = document.getElementById('go');
+const statusEl = document.getElementById('status');
+const barFill = document.getElementById('barFill');
+
+let selectedFile = null;
+
+dz.addEventListener('click', () => fileInput.click());
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('drag');
+  if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) setFile(fileInput.files[0]);
+});
+
+function setFile(f) {
+  if (f.type !== 'application/pdf') {
+    statusEl.textContent = 'Ce fichier n\'est pas un PDF.';
+    return;
+  }
+  selectedFile = f;
+  fnameEl.textContent = f.name;
+  goBtn.disabled = false;
+  statusEl.textContent = '';
+}
+
+// Miroirs publics LibreTranslate, gratuits et sans clé (liste officielle :
+// https://docs.libretranslate.com/community/mirrors/). Gérés bénévolement —
+// pas de garantie de débit ni de disponibilité. Pour ton propre serveur,
+// remplace ce tableau par une seule URL, ex: ['https://mon-serveur.exemple.com'].
+const LIBRETRANSLATE_MIRRORS = [
+  'https://translate.fedilab.app',
+  'https://translate.cutie.dating',
+];
+
+async function translateText(text, source, target) {
+  const clean = text.trim();
+  if (!clean) return text;
+
+  for (const base of LIBRETRANSLATE_MIRRORS) {
+    try {
+      const res = await fetch(`${base}/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: clean, source, target, format: 'text' }),
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (data.translatedText) return data.translatedText;
+    } catch (err) {
+      continue; // on tente le miroir suivant
+    }
+  }
+  return text; // repli silencieux : on ne bloque jamais le document sur un bloc en échec
+}
+
+function fitFontSize(ctx, text, maxWidth, startSize) {
+  let size = startSize;
+  ctx.font = `${size}px IBM Plex Sans, sans-serif`;
+  while (size > 5 && ctx.measureText(text).width > maxWidth) {
+    size -= 0.5;
+    ctx.font = `${size}px IBM Plex Sans, sans-serif`;
+  }
+  return size;
+}
+
+function groupIntoLines(items) {
+  const lines = [];
+  const sorted = [...items].sort((a, b) => a.y - b.y || a.x - b.x);
+  for (const it of sorted) {
+    const last = lines[lines.length - 1];
+    if (last && Math.abs(last.y - it.y) < 4) {
+      last.items.push(it);
+      last.text += (last.text.endsWith(' ') ? '' : ' ') + it.str;
+      last.x2 = Math.max(last.x2, it.x + it.width);
+      last.fontHeight = Math.max(last.fontHeight, it.fontHeight);
+    } else {
+      lines.push({ y: it.y, x: it.x, x2: it.x + it.width, fontHeight: it.fontHeight, text: it.str, items: [it] });
+    }
+  }
+  return lines.filter(l => l.text.trim().length > 0);
+}
+
+async function translatePdf(file, source, target) {
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const outPdf = await PDFLib.PDFDocument.create();
+  const numPages = pdf.numPages;
+
+  for (let p = 1; p <= numPages; p++) {
+    const page = await pdf.getPage(p);
+    const scale = 2; // qualité de rendu
+    const viewport = page.getViewport({ scale });
+    const baseViewport = page.getViewport({ scale: 1 });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    const textContent = await page.getTextContent();
+    const items = textContent.items.map(it => {
+      const tx = pdfjsLib.Util.transform(viewport.transform, it.transform);
+      const fontHeight = Math.hypot(tx[2], tx[3]);
+      const width = it.width * Math.hypot(tx[0], tx[1]);
+      return { str: it.str, x: tx[4], y: tx[5], fontHeight, width };
+    });
+
+    const lines = groupIntoLines(items);
+
+    for (let li = 0; li < lines.length; li++) {
+      const line = lines[li];
+      statusEl.textContent = `Page ${p}/${numPages} — bloc ${li + 1}/${lines.length}`;
+      const pct = ((p - 1 + li / Math.max(lines.length, 1)) / numPages) * 100;
+      barFill.style.width = pct + '%';
+
+      const translated = await translateText(line.text, source, target);
+      await new Promise(r => setTimeout(r, 150)); // évite de saturer les miroirs publics gratuits
+
+      const boxX = line.x;
+      const boxY = line.y - line.fontHeight * 0.85;
+      const boxW = Math.max(line.x2 - line.x, 20);
+      const boxH = line.fontHeight * 1.35;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(boxX - 1, boxY - 1, boxW + 2, boxH + 2);
+
+      const fitted = fitFontSize(ctx, translated, boxW, line.fontHeight * 0.92);
+      ctx.fillStyle = '#111111';
+      ctx.font = `${fitted}px IBM Plex Sans, sans-serif`;
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(translated, boxX, line.y);
+    }
+
+    const imgData = canvas.toDataURL('image/png');
+    const pngImage = await outPdf.embedPng(imgData);
+    const outPage = outPdf.addPage([baseViewport.width, baseViewport.height]);
+    outPage.drawImage(pngImage, { x: 0, y: 0, width: baseViewport.width, height: baseViewport.height });
+  }
+
+  barFill.style.width = '100%';
+  return await outPdf.save();
+}
+
+goBtn.addEventListener('click', async () => {
+  if (!selectedFile) return;
+  goBtn.disabled = true;
+  statusEl.textContent = 'Démarrage...';
+  barFill.style.width = '0%';
+  try {
+    const bytes = await translatePdf(selectedFile, sourceSel.value, targetSel.value);
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'traduit.pdf';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    statusEl.textContent = 'Terminé — téléchargement lancé.';
+  } catch (err) {
+    statusEl.textContent = 'Erreur : ' + err.message;
+  } finally {
+    goBtn.disabled = false;
+  }
+});
+</script>
+
+</body>
+</html>
