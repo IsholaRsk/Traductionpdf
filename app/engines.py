@@ -514,7 +514,9 @@ class LibreTranslateEngine(BaseEngine):
 class DeepLEngine(BaseEngine):
     id = "deepl"
     label = "DeepL"
-    hint = "Votre clé. Qualité maximale, lots de 50 lignes, jusqu'à 500 000 caractères/mois en gratuit."
+    hint = ("Votre clé. Qualité maximale, lots de 50 lignes. Le forfait DeepL API Free donne "
+            "500 000 caractères par mois, sans carte bancaire : collez la clé qui se termine par "
+            "« :fx », l'adresse api-free.deepl.com est choisie toute seule.")
     max_chars = 4500
     max_lines = 50
     concurrency = 3
@@ -567,7 +569,12 @@ class DeepLEngine(BaseEngine):
 class OpenAICompatEngine(BaseEngine):
     id = "llm"
     label = "IA (compatible OpenAI)"
-    hint = "Votre clé : OpenAI, Mistral, Groq, OpenRouter, Ollama… Respecte listes, code et consignes de style."
+    hint = ("Tout point compatible OpenAI : respect des listes, du code et des consignes de style. "
+            "Sans payer, trois adresses fonctionnent — Gemini : "
+            "https://generativelanguage.googleapis.com/v1beta/openai/ avec gemini-2.0-flash ; Groq : "
+            "https://api.groq.com/openai/v1 avec llama-3.3-70b-versatile ; OpenRouter : "
+            "https://openrouter.ai/api/v1 avec un modèle portant « :free ». Et Ollama en local : "
+            "http://127.0.0.1:11434/v1, sans clé.")
     max_chars = 4200
     max_lines = 20
     concurrency = 2

@@ -743,19 +743,107 @@ class XlsxDoc(Doc):
         return out.getvalue(), self.out_name("_traduit"), self.preview_in(), body
 
 
+def _mupdf():
+    """PyMuPDF, si installé : c'est lui qui permet de rendre un vrai PDF et non un texte."""
+    try:
+        import pymupdf
+        return pymupdf
+    except Exception:  # noqa: BLE001
+        try:
+            import fitz as pymupdf  # ancien nom du module
+            return pymupdf
+        except Exception:  # noqa: BLE001
+            return None
+
+
+def _droitier(texte):
+    """Le bloc est-il écrit de droite à gauche (arabe, hébreu…) ?"""
+    marques = sum(1 for c in texte if "\u0590" <= c <= "\u08ff" or "\ufb1d" <= c <= "\ufeff")
+    return marques * 2 > max(len(texte), 1)
+
+
+def _echapper(texte):
+    return (texte or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
 class PdfDoc(Doc):
+    """Traduction d'un PDF en PDF : même pagination, même empreinte de texte.
+
+    Le principe, celui des outils de traduction de documents : on *efface* chaque
+    bloc de texte d'origine (annotation de caviardage, images et tracés épargnés),
+    puis on repose sa traduction dans le rectangle exact du bloc, corps de police
+    d'origine et repli automatique si la langue prend plus de place.
+
+    Sans PyMuPDF, on retombe sur l'extraction texte seule — et on le dit.
+    """
+
     kind = "pdf"
-    label = "PDF (texte extrait)"
-    note = "La mise en page n'est pas reproduite : la sortie est un fichier texte."
+    label = "PDF"
+    note = ""
 
     def __init__(self, name, blob):
         super().__init__(name)
+        m = _mupdf()
+        if m is None:
+            self._texte_seul(blob)
+            return
+        try:
+            doc = m.open(stream=blob, filetype="pdf")
+        except Exception as exc:  # noqa: BLE001
+            raise Unsupported(f"PDF illisible : {exc}") from exc
+        try:
+            if doc.needs_pass and not doc.authenticate(""):
+                raise Unsupported("PDF protégé par un mot de passe : lecture impossible.")
+            self.source = blob
+            self.blocs = []
+            for pno, page in enumerate(doc):
+                for block in page.get_text("dict")["blocks"]:
+                    if block.get("type") != 0 or not block.get("lines"):
+                        continue
+                    x0, y0, x1, y1 = block["bbox"]
+                    if x1 - x0 < 3 or y1 - y0 < 3:
+                        continue
+                    spans = [sp for ln in block["lines"] for sp in ln.get("spans", ())]
+                    if not spans:
+                        continue
+                    texte = " ".join((sp.get("text") or "").strip() for sp in spans).strip()
+                    if not texte:
+                        continue
+                    idx = self.add(texte)
+                    self.blocs.append({
+                        "u": idx, "p": pno, "r": (x0, y0, x1, y1),
+                        "t": max(5.0, min(max((sp.get("size") or 10) for sp in spans), 44.0)),
+                        "c": int(spans[0].get("color") or 0),
+                        # attributs de la police du premier span : graisse, italique,
+                        # famille — collés à l’original (flags PyMuPDF)
+                        "f": int(spans[0].get("flags") or 0),
+                    })
+        except Unsupported:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            raise Unsupported(f"PDF illisible : {exc}") from exc
+        finally:
+            doc.close()
+        if not self.todo:
+            raise Unsupported("Aucun texte sélectionnable dans ce PDF (peut être un scan).")
+        self.label = "PDF"
+        self.note = (
+            "PDF reconstruit page à page : le texte d’origine est effacé, sa traduction reposée "
+            "dans son rectangle — pagination, images, tracés, corps et graisse de police, et mise "
+            "en page conservés. Les polices sont substituées (Helvetica, Times, Courrier) : le "
+            "crénage peut légèrement bouger, le texte d’origine a disparu."
+        )
+
+    def _texte_seul(self, blob):
+        """Repli sans PyMuPDF : on lit le texte avec pypdf, la sortie est un fichier texte."""
         try:
             from pypdf import PdfReader  # type: ignore
         except Exception as exc:  # noqa: BLE001
             raise Unsupported(
                 "Extraction PDF indisponible sur ce serveur. Copiez le texte du PDF dans l'onglet « Texte »."
             ) from exc
+        self.blocs = []
+        self.source = blob
         try:
             reader = PdfReader(io.BytesIO(blob))
             if reader.is_encrypted:
@@ -771,17 +859,65 @@ class PdfDoc(Doc):
         body = "\n\n".join(p.strip() for p in pages if p.strip())
         if not body.strip():
             raise Unsupported("Aucun texte sélectionnable dans ce PDF (peut être un scan).")
-        self.page_breaks = [i for i, p in enumerate(pages) if p.strip()]
         self.text = body
         for blk in paragraphs_of(body.split("\n")):
-            joined = " ".join(x.strip() for x in blk).strip()
-            self.add(joined)
+            self.add(" ".join(x.strip() for x in blk).strip())
         if not self.todo:
             raise Unsupported("Aucun texte sélectionnable dans ce PDF.")
+        self.label = "PDF (texte extrait)"
+        self.note = ("PyMuPDF n'est pas installé sur ce serveur : seul le texte est rendu, "
+                     "en fichier .txt. Installez-le (pip install pymupdf) pour conserver la mise en page.")
 
     def rebuild(self, translations):
-        body = "\n\n".join(t for t in translations if (t or "").strip())
-        return body.encode("utf-8"), self.out_name("").rsplit(".", 1)[0] + "_traduit.txt", self.preview_in(), body
+        if not getattr(self, "blocs", None):
+            body = "\n\n".join(t for t in translations if (t or "").strip())
+            nom = self.out_name("").rsplit(".", 1)[0] + "_traduit.txt"
+            return body.encode("utf-8"), nom, self.preview_in(), body
+
+        m = _mupdf()
+        doc = m.open(stream=self.source, filetype="pdf")
+        par_page = {}
+        for bloc in self.blocs:
+            par_page.setdefault(bloc["p"], []).append(bloc)
+        for pno, blocs in par_page.items():
+            page = doc[pno]
+            # un bloc sans traduction ne doit pas laisser de trou : on ne le touche pas
+            a_remplacer = [b for b in blocs if (translations[b["u"]] or "").strip()]
+            if not a_remplacer:
+                continue
+            for bloc in a_remplacer:
+                page.add_redact_annot(m.Rect(bloc["r"]))
+            page.apply_redactions(images=m.PDF_REDACT_IMAGE_NONE, graphics=m.PDF_REDACT_LINE_ART_NONE)
+            for bloc in a_remplacer:
+                texte = (translations[bloc["u"]] or "").strip()
+                x0, y0, x1, y1 = bloc["r"]
+                rect = m.Rect(x0, y0, max(x0 + 8, x1), max(y0 + 6, y1 + 2))
+                c = bloc["c"]
+                couleur = "#%02x%02x%02x" % ((c >> 16) & 255, (c >> 8) & 255, c & 255)
+                sens = " direction:rtl;text-align:right;" if _droitier(texte) else ""
+                f = bloc.get("f") or 0
+                gras, italique = f & 16, f & 2
+                famille = "monospace" if f & 8 else ("serif" if f & 4 else "sans-serif")
+                html = (f'<div style="font-size:{bloc["t"]:.1f}pt;color:{couleur};'
+                        f'font-family:{famille};{"font-weight:bold;" if gras else ""}'
+                        f'{"font-style:italic;" if italique else ""}'
+                        f'line-height:1.24;{sens}">{_echapper(texte)}</div>')
+                try:
+                    page.insert_htmlbox(rect, html, scale_low=0.2)
+                except Exception:  # noqa: BLE001 - un bloc récalcitrant ne doit pas perdre le fichier
+                    try:
+                        page.insert_text((x0, y1 - 1), texte[:400], fontsize=bloc["t"],
+                                         fontname=("hebo" if gras else "helv"),
+                                         color=[v / 255 for v in ((c >> 16) & 255, (c >> 8) & 255, c & 255)])
+                    except Exception:  # noqa: BLE001
+                        pass
+        try:  # ne garder que les glyphes utilisés : le fichier reste léger
+            doc.subset_fonts()
+        except Exception:  # noqa: BLE001
+            pass
+        out = doc.tobytes(deflate=True, garbage=4)
+        nom = self.out_name("_traduit")
+        return out, nom, self.preview_in(), "\n\n".join(t for t in translations if (t or "").strip())
 
 
 # --------------------------------------------------------------------------- #

@@ -358,15 +358,16 @@ ENGINE_FIELDS = {
         {"name": "min_interval", "label": "Délai entre requêtes (s)", "type": "number", "placeholder": "1.0"},
     ],
     "deepl": [
-        {"name": "api_key", "label": "Clé DeepL API", "type": "password"},
+        {"name": "api_key", "label": "Clé DeepL API", "type": "password",
+         "placeholder": "…:fx  (compte gratuit, 500 000 caractères/mois)"},
         {"name": "base_url", "label": "URL de l'API (auto si vide)", "type": "text",
          "placeholder": "https://api-free.deepl.com"},
     ],
     "llm": [
         {"name": "base_url", "label": "Point d'entrée compatible OpenAI", "type": "text",
-         "placeholder": "https://api.openai.com/v1"},
-        {"name": "api_key", "label": "Clé", "type": "password"},
-        {"name": "model", "label": "Modèle", "type": "text", "placeholder": "gpt-4o-mini"},
+         "placeholder": "https://generativelanguage.googleapis.com/v1beta/openai/"},
+        {"name": "api_key", "label": "Clé (aucune pour Ollama)", "type": "password"},
+        {"name": "model", "label": "Modèle", "type": "text", "placeholder": "gemini-2.0-flash"},
         {"name": "temperature", "label": "Température", "type": "number", "placeholder": "0.2"},
     ],
 }

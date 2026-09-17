@@ -200,6 +200,75 @@ print("\n· latin-1")
 doc = fmt.load("ancien.txt", "Accélérateur déjà là.".encode("cp1252"), {})
 check("repli d'encodage", doc.units[0].startswith("ACCELERATEUR") or "cc" in doc.units[0], repr(doc.units))
 
+print("\n· PDF : mise en page et extension conservées")
+try:
+    import pymupdf as _m
+except Exception:  # noqa: BLE001
+    _m = None
+if _m is None:
+    print("    (PyMuPDF absent : checks de repli uniquement)")
+    try:
+        fmt.load("x.pdf", ("%PDF-1.4\nfaux corps\n%%EOF").encode("utf-8"), {})
+        check("pdf invalide rejeté", False)
+    except fmt.Unsupported:
+        check("pdf invalide rejeté", True)
+else:
+    _doc = _m.open()
+    for _t, _c in [("Rapport du port", "Le port ferme à vingt heures.\nLe gardien allume le phare."),
+                   ("Annexe", "Les bateaux rentrent quand le vent tourne.")]:
+        _pg = _doc.new_page()
+        _pg.insert_text((72, 90), _t, fontsize=18, fontname="hebo")
+        _pg.insert_text((72, 140), _c, fontsize=11)
+        _pg.draw_line((72, 105), (523, 105), color=(0.4, 0.5, 0.4), width=1.2)
+    _pdf = _doc.tobytes(deflate=True)
+    _doc.close()
+
+    _d = fmt.load("rapport.pdf", _pdf, {})
+    check("le PDF se lit en blocs paginés", len(_d.todo) == 4 and len(_d.blocs) == 4, _d.todo)
+    check(" chaque bloc porte sa page et son rectangle",
+          all(b["p"] in (0, 1) and b["r"][2] > b["r"][0] for b in _d.blocs), _d.blocs[:1])
+    TRAD = {"Rapport du port": "Port Report",
+            "Le port ferme à vingt heures. Le gardien allume le phare.": "The port closes at eight. The keeper lights the beacon.",
+            "Annexe": "Appendix",
+            "Les bateaux rentrent quand le vent tourne.": "Boats come back when the wind turns."}
+    _full = [TRAD.get(_d.units[i], "") if _d.units[i] else "" for i in range(_d.unit_count)]
+    _out, _nom, _pin, _pout = _d.rebuild(_full)
+    check("le fichier rendu est un PDF, pas un texte", _out[:5] == b"%PDF-" and _nom.endswith(".pdf"), _nom)
+    check("l’extension est conservée, le nom marqué « _traduit »", _nom == "rapport_traduit.pdf", _nom)
+    _r = _m.open(stream=_out, filetype="pdf")
+    check("la pagination est conservée", _r.page_count == 2, _r.page_count)
+    check("le format de page est conservé", tuple(round(v) for v in _r[0].rect) == (0, 0, 595, 842), tuple(_r[0].rect))
+    _txt = " ".join(p.get_text() for p in _r)
+    check("l’écriture a changé, la forme est restée", "Port Report" in _txt and "The port closes at eight" in _txt, _txt[:120])
+    check("plus aucune trace du texte d’origine", "vingt heures" not in _txt and "vent tourne" not in _txt, _txt[:120])
+    check("chaque page garde son bloc de titre en haut", all("72" not in p.get_text() for p in _r) and _r[1].get_text().strip().startswith("Appendix"), _r[1].get_text()[:40])
+    check("le tracé d’origine (ligne) n’est pas effacé", len(_r[0].get_drawings()) >= 1, len(_r[0].get_drawings()))
+    check("la note d’avertissement décrit le vrai comportement", "mise en page" in _d.note and "pas reproduite" not in _d.note, _d.note)
+    _r.close()
+
+    # un bloc non traduit ne doit pas laisser de trou dans le document
+    _d2 = fmt.load("trou.pdf", _pdf, {})
+    _partiel = ["" for _ in range(_d2.unit_count)]
+    _partiel[0] = "Port Report"
+    _o2, _n2, _i2, _x2 = _d2.rebuild(_partiel)
+    _r2 = _m.open(stream=_o2, filetype="pdf")
+    _t2 = _r2[0].get_text()
+    check("un passage non traduit reste en place plutôt que de créer un trou",
+          "Port Report" in _t2 and "Le gardien allume le phare" in _t2, repr(_t2[:120]))
+    _r2.close()
+
+    _scan = _m.open()
+    _scan.new_page().insert_text((72, 90), " ".join(["x"] * 3), fontsize=1)
+    _scan[0].get_pixmap()
+    _vide = _scan.tobytes()
+    _scan.close()
+    try:
+        fmt.load("scan.pdf", _vide, {})
+        check("PDF sans texte sélectionnable refusé avec un mot clair", False)
+    except fmt.Unsupported as exc:
+        check("PDF sans texte sélectionnable refusé avec un mot clair", "scan" in str(exc), str(exc))
+
+
 print()
 if FAILURES:
     print(f"{len(FAILURES)} échec(s) sur {CHECKS} vérifications :")

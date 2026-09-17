@@ -23,14 +23,16 @@ python3 server.py --port 8000        # ouvre http://localhost:8000
 ```
 
 C'est tout : le serveur n'utilise que la bibliothèque standard de Python 3.9+.
-Quatre modules complémentaires améliorent la prise en charge des formats, **s'ils sont
-présents ils sont utilisés, sinon TradFilez les ignore poliment** :
+Cinq modules complémentaires améliorent la prise en charge des formats, **s'ils sont
+présents ils sont utilisés, sinon TradFilez les ignore poliment** (`pip install
+python-docx openpyxl pymupdf pypdf beautifulsoup4`) :
 
 | module | apport |
 |---|---|
 | `python-docx` | documents Word (.docx) |
 | `openpyxl` | classeurs Excel (.xlsx) |
-| `pypdf` (déjà dans `vendor/`) | extraction texte des PDF |
+| `PyMuPDF` | PDF fidèle à la mise en page (blocs repositionnés) |
+| `pypdf` (déjà dans `vendor/`) | PDF, repli texte seul si PyMuPDF manque |
 | `beautifulsoup4` | traduction nœud par nœud du HTML |
 
 ## Comment ça marche
@@ -74,10 +76,44 @@ navigateur ──POST /api/jobs (fichier + X-Meta)──▶  serveur
 Le **ton** (fluide, fidèle, soutenu, simple) et le **glossaire** sont transmis à DeepL
 (`formality`) et au moteur IA ; les moteurs gratuits les ignorent.
 
+## Quelle API gratuite fournir ?
+
+À coller dans ⚙ **Réglages** du site — la clé reste dans le navigateur de celui qui la
+saisit, rien n'est écrit sur le serveur. Par ordre d'intérêt :
+
+| fournisseur | ce qu'on obtient | où | réglage à saisir |
+|---|---|---|---|
+| **DeepL API Free** | 500 000 caractères/mois, sans carte | deepl.com/pro-api → « API Free » | clé seule ; `api-free.deepl.com` est déduit automatiquement de la clé qui finit par `:fx` |
+| **Google Gemini** (niveau gratuit) | quelques dizaines de requêtes/jour, sans carte | aistudio.google.com → « Get API key » | base `https://generativelanguage.googleapis.com/v1beta/openai/` · modèle `gemini-2.0-flash` |
+| **Groq** | très rapide, quota quotidien gratuit, sans carte | console.groq.com/keys | base `https://api.groq.com/openai/v1` · modèle `llama-3.3-70b-versatile` |
+| **OpenRouter** | catalogue de modèles portant `:free`, sans carte | openrouter.ai/keys | base `https://openrouter.ai/api/v1` · n'importe quel id `…:free` |
+| **MyMemory** (déjà actif) | ~5 000 mots/jour par IP, ~50 000 avec un e-mail | — | aucun, juste l'e-mail pour élargir |
+| **LibreTranslate auto-hébergé** | illimité, privé | `docker run -p 5000:5000 libretranslate/libretranslate` | base `http://127.0.0.1:5000` |
+
+Vérifié le jour de la rédaction de ce README : `POST https://api-free.deepl.com/v2/translate`
+répond `403 Missing Authorization header`, `POST
+https://generativelanguage.googleapis.com/v1beta/openai/chat/completions` répond
+`400 Missing or invalid Authorization header`, `GET https://api.groq.com/openai/v1/models`
+répond `401 Invalid API Key` — trois hôtes vivants qui n'attendent qu'une clé.
+
+Les API « gratuites » des gros nuages (Google Cloud Translation, Azure Translator, Amazon
+Translate) ont de vrais quotas mensuels gratuits mais **exigent une carte bancaire** : à
+réserver à un usage professionnel.
+
+Moteur IA ou moteur de traduction ? Pour un fichier de travail (rapport, sous-titres,
+courriel) DeepL suffit et coûte moins cher en quota. Pour un fichier où la mise en page
+et la fidélité du ton importent (littérature, texte marketing, PDF dense), le moteur IA
+Gemini/Groq est meilleur — il reçoit les consignes de ton et le glossaire.
+
 ## Formats acceptés
 
 `.txt .md .rst .srt .vtt .csv .tsv .json .html .xml .yml .yaml .toml .ini .po .docx .xlsx .pdf`
+
 (plus toute extension texte inconnue, traitée comme du `.txt`).
+
+Un aller-retour garde **la forme du fichier** : extension, pagination, horodatages,
+feuilles, balises et mise en page — le PDF est caviardé puis recompillé à la même
+place, jamais converti en `.txt`. Seule l'écriture change.
 
 Refus explicite et en français pour `.doc .odt .rtf .pptx .epub` et les binaires — avec la
 suggestion du contournement (enregistrer en `.docx`, ou coller dans l'onglet Texte).
@@ -137,7 +173,7 @@ Quatre suites, du plus proche du métal au plus proche du visiteur :
 
 ```bash
 cd app
-python3 tests/test_formats.py              # 52 garde-fous de structure, hors-ligne
+python3 tests/test_formats.py              # 65 garde-fous de structure, hors-ligne
 python3 server.py --port 8123 &            # serveur de test (mode file d'attente)
 python3 tests/test_api.py mymemory fr en   # 103 vérifications : cycle complet, formats réels
 python3 tests/check_failures.py 8123       # repli entre moteurs, quota, erreurs, annulation

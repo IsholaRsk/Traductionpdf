@@ -704,8 +704,8 @@
           <div class="pane out"><header><span>Traduction — ${esc(label(state.tgt))}</span><button class="toggle" data-t></button></header><pre>${esc(crop(r.out))}</pre></div>
         </div>
         ${r.size > 3000000 ? "" : ""}
-        ${["xlsx", "docx"].includes(r.kind) ? `<p class="bin-note">Fichier <b>${esc(r.kindLabel)}</b> reconstruit : l’aperçu texte sert de contrôle, le document complet s’obtient par le téléchargement.</p>` : ""}
-        ${r.kind === "pdf" ? `<p class="bin-note"><b>PDF :</b> le texte a été extrait puis traduit, la mise en page d’origine n’est pas reproduite.</p>` : ""}`;
+        ${r.note ? `<p class="bin-note"><b>${esc(r.kindLabel || "Fichier")} :</b> ${esc(r.note)}</p>`
+          : (["xlsx", "docx"].includes(r.kind) ? `<p class="bin-note">Fichier <b>${esc(r.kindLabel)}</b> reconstruit : l’aperçu texte sert de contrôle, le document complet s’obtient par le téléchargement.</p>` : "")}`;
       $$("[data-t]", box).forEach((b) => b.addEventListener("click", () => box.classList.toggle("is-open")));
       $("[data-copy]", box).addEventListener("click", async () => {
         try { await navigator.clipboard.writeText(r.out || ""); toast("Traduction copiée."); }

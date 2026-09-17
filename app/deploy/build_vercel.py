@@ -27,6 +27,7 @@ flask>=3.0
 # mais .docx, .xlsx, .pdf et .html retombent sur des parseurs plus simples.
 python-docx>=1.1
 openpyxl>=3.1
+PyMuPDF>=1.24
 pypdf>=4.2
 beautifulsoup4>=4.12
 lxml>=5.2
