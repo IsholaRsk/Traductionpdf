@@ -151,8 +151,8 @@ Chrome headless pour les captures) :
 
 ```bash
 cd tests/navigateur && npm install jsdom
-node ui.test.mjs http://127.0.0.1:8123          # 37 : parcours complet, réglages, langues RTL
-node stateless.test.mjs http://127.0.0.1:8011   # 31 : mode sans état, ZIP du navigateur, annulation
+node ui.test.mjs http://127.0.0.1:8123          # 41 : parcours complet, réglages, langues RTL, reprise des clés déjà saisies
+node stateless.test.mjs http://127.0.0.1:8011   # 33 : mode sans état, ZIP du navigateur, annulation
 node shots.mjs http://127.0.0.1:8000             # captures PNG dans tests/navigateur/rendu/
 ```
 
