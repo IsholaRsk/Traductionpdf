@@ -1,0 +1,6 @@
+# Dépendances OPTIONNELLES — Passerelle fonctionne sans elles.
+# Chacune n'ouvre qu'un format de plus ; le serveur les ignore si elles manquent.
+python-docx>=1.1     # .docx
+openpyxl>=3.1        # .xlsx
+pypdf>=5.0           # .pdf (extraction du texte)
+beautifulsoup4>=4.12 # .html (nœud par nœud, doctype et scripts préservés)

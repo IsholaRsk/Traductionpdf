@@ -1,0 +1,1410 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Traduction de fichiers, sobre et locale.">
+<title>Passerelle — traduction de fichiers</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%237E8E7A'/%3E%3Cpath d='M8 20c3-7 13-7 16 0' stroke='%23FAF8F4' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M8 24h16' stroke='%23FAF8F4' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+/* Passerelle — feuille de style : papier doux, contrastes bas, rien de superflu. */
+
+:root {
+  --paper: #f6f4f0;
+  --paper-2: #efece6;
+  --card: #fffefb;
+  --ink: #211f1b;
+  --ink-2: #6d675d;
+  --ink-3: #756f63;
+  --line: #e4dfd5;
+  --line-2: #eeeae2;
+  --accent: #7d8f79;
+  --accent-soft: #eef1ec;
+  --accent-ink: #43503f;
+  --ok: #5f7f60;
+  --warn: #a97b3f;
+  --err: #a5563f;
+  --ring: rgba(125, 143, 121, .32);
+  --primary-bg: #43503f;
+  --primary-ink: #f7f5f1;
+  --shadow: 0 1px 2px rgba(33, 31, 27, .04), 0 12px 30px -18px rgba(33, 31, 27, .18);
+  --radius: 16px;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #171614;
+    --paper-2: #1e1d1a;
+    --card: #211f1c;
+    --ink: #ece8e0;
+    --ink-2: #a9a296;
+    --ink-3: #948d80;
+    --line: #332f29;
+    --line-2: #2b2823;
+    --accent: #93a68e;
+    --accent-soft: #262a25;
+    --accent-ink: #cbd6c7;
+    --ok: #86a785;
+    --warn: #c79a5c;
+    --err: #c9755a;
+    --ring: rgba(147, 166, 142, .35);
+    --primary-bg: #a9bda4;
+    --primary-ink: #1a1916;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 18px 40px -24px rgba(0, 0, 0, .6);
+  }
+}
+
+* { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font: 15.5px/1.62 var(--sans);
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 620px at 12% -12%, rgba(125, 143, 121, .12), transparent 62%),
+    radial-gradient(900px 520px at 100% 4%, rgba(169, 123, 63, .07), transparent 60%),
+    var(--paper);
+  min-height: 100vh;
+  letter-spacing: .005em;
+}
+
+::selection { background: var(--accent-soft); }
+
+.skip {
+  position: absolute; left: -9999px; top: 0; padding: 10px 14px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px; z-index: 40;
+}
+.skip:focus { left: 12px; top: 12px; }
+
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+
+/* ------------------------------------------------------------------ barre */
+.topbar {
+  max-width: 1080px; margin: 0 auto; padding: 34px 26px 18px;
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+}
+.brand { display: flex; gap: 13px; align-items: center; }
+.mark { width: 30px; height: 30px; color: var(--accent); flex: none; }
+.brand-text h1 {
+  margin: 0; font-size: 21px; font-weight: 600; letter-spacing: -.01em;
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+.brand-text p { margin: 1px 0 0; font-size: 13px; color: var(--ink-2); }
+.top-actions { display: flex; gap: 8px; align-items: center; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 13px 7px 11px; border-radius: 999px;
+  background: var(--card); border: 1px solid var(--line); color: var(--ink-2);
+  font-size: 13px; transition: .16s ease;
+}
+.chip:hover { color: var(--ink); border-color: var(--ink-3); }
+.swatch { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 22%, transparent); }
+.swatch.free { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 20%, transparent); }
+.swatch.key { background: var(--accent); box-shadow: 0 0 0 3px var(--ring); }
+
+.icon-btn {
+  width: 34px; height: 34px; display: grid; place-items: center;
+  background: transparent; border: 1px solid transparent; border-radius: 10px; color: var(--ink-2);
+  transition: .16s ease;
+}
+.icon-btn:hover { background: var(--card); border-color: var(--line); color: var(--ink); }
+.icon-btn svg { width: 19px; height: 19px; }
+
+/* ------------------------------------------------------------------ aire */
+main { max-width: 1080px; margin: 0 auto; padding: 8px 26px 60px; display: grid; gap: 14px; }
+
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px 22px 22px; box-shadow: var(--shadow);
+}
+.card-head { display: flex; align-items: center; gap: 11px; margin-bottom: 15px; flex-wrap: wrap; }
+.card-head h2 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: .01em; }
+.step {
+  width: 21px; height: 21px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  font-size: 11.5px; font-weight: 600; background: var(--paper-2); color: var(--ink-2);
+  border: 1px solid var(--line);
+}
+.step.ok { background: var(--accent-soft); color: var(--accent-ink); border-color: transparent; }
+.aux { font-size: 12.5px; color: var(--ink-3); margin-left: auto; }
+
+.tabs { display: flex; gap: 3px; margin-left: auto; background: var(--paper-2); padding: 3px; border-radius: 10px; }
+.tab {
+  border: 0; background: transparent; padding: 5px 12px; border-radius: 8px;
+  font-size: 13px; color: var(--ink-2); transition: .16s ease;
+}
+.tab.is-on { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+
+/* ------------------------------------------------------------------ dépôt */
+.drop {
+  border: 1px dashed color-mix(in srgb, var(--line) 82%, var(--ink-3));
+  border-radius: 13px; padding: 30px 20px 26px; text-align: center; color: var(--ink-2);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 55%, transparent), transparent);
+  transition: .18s ease; cursor: pointer;
+}
+.drop:hover, .drop:focus-visible { border-color: var(--accent); color: var(--ink); }
+.drop.is-over { border-color: var(--accent); background: var(--accent-soft); transform: translateY(-1px); }
+.drop svg { width: 42px; height: 42px; color: var(--accent); opacity: .85; }
+.drop-title { margin: 8px 0 2px; font-size: 16px; color: var(--ink); font-weight: 550; }
+.drop-sub { margin: 0; font-size: 13.5px; }
+.drop-formats { margin: 12px 0 0; font-size: 11.5px; color: var(--ink-3); font-family: var(--mono); letter-spacing: -.02em; }
+.link { color: var(--accent-ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.empty-note { margin: 12px 2px 0; font-size: 12.5px; color: var(--ink-3); }
+
+#pasteArea {
+  width: 100%; resize: vertical; min-height: 150px; padding: 14px 15px;
+  background: var(--paper-2); border: 1px solid var(--line); border-radius: 12px;
+  font-size: 14.5px; line-height: 1.6;
+}
+#pasteArea:focus { outline: none; border-color: var(--accent); background: var(--card); }
+.paste-foot { display: flex; gap: 12px; align-items: center; margin-top: 10px; }
+.paste-foot input {
+  flex: 1; max-width: 320px; padding: 7px 11px; background: transparent;
+  border: 1px solid var(--line); border-radius: 9px; font-family: var(--mono); font-size: 12.5px;
+}
+.counter { font-size: 12.5px; color: var(--ink-3); }
+
+/* ------------------------------------------------------------------ fichiers */
+.files { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+.files li {
+  display: grid; grid-template-columns: 26px 1fr auto; gap: 12px; align-items: center;
+  padding: 11px 13px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--paper-2);
+  transition: .18s ease;
+}
+.files li.is-run { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: var(--card); }
+.files li.is-err { border-color: color-mix(in srgb, var(--err) 45%, var(--line)); }
+.files .f-icon { color: var(--ink-3); display: grid; place-items: center; }
+.files .f-icon svg { width: 17px; height: 17px; }
+.f-main { min-width: 0; }
+.f-name { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.f-meta { font-size: 12px; color: var(--ink-3); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.f-meta .kind {
+  text-transform: uppercase; letter-spacing: .06em; font-size: 10.5px;
+  border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; color: var(--ink-2);
+}
+.f-bar { height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 7px; }
+.f-bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .35s ease; }
+.f-bar.indet i { width: 34%; animation: slide 1.5s cubic-bezier(.5,0,.5,1) infinite; }
+@keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(330%); } }
+.f-state { font-size: 12px; color: var(--ink-2); white-space: nowrap; display: flex; gap: 9px; align-items: center; }
+.f-state .spin { width: 13px; height: 13px; border-radius: 50%; border: 1.6px solid var(--line); border-top-color: var(--accent); animation: spin .85s linear infinite; }
+@keyframes spin { to { transform: rotate(1turn); } }
+.f-x { border: 0; background: transparent; color: var(--ink-3); font-size: 16px; line-height: 1; padding: 2px 4px; border-radius: 6px; }
+.f-x:hover { color: var(--err); background: color-mix(in srgb, var(--err) 12%, transparent); }
+.f-err { grid-column: 2/-1; font-size: 12.5px; color: var(--err); }
+.f-warn { grid-column: 2/-1; font-size: 12.5px; color: var(--warn); }
+
+/* ------------------------------------------------------------------ langues */
+.langs { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: end; }
+.lang label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-3); margin-bottom: 6px; }
+.lang-btn {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 11px 13px; background: var(--paper-2); border: 1px solid var(--line); border-radius: 11px;
+  transition: .16s ease; text-align: left;
+}
+.lang-btn:hover { border-color: var(--accent); }
+.lang-name { font-size: 14.5px; font-weight: 500; }
+.lang-code { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); }
+.swap {
+  width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--card);
+  color: var(--ink-2); display: grid; place-items: center; transition: .18s ease;
+}
+.swap:hover { color: var(--accent-ink); border-color: var(--accent); transform: rotate(180deg); }
+.swap svg { width: 19px; height: 19px; }
+
+.combo {
+  margin-top: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: var(--shadow); overflow: hidden;
+}
+.combo input {
+  width: 100%; border: 0; border-bottom: 1px solid var(--line-2); padding: 10px 13px;
+  background: transparent; font-size: 14px;
+}
+.combo input:focus { outline: none; }
+.combo ul { list-style: none; margin: 0; padding: 5px; max-height: 268px; overflow: auto; }
+.combo li { padding: 7px 10px; border-radius: 8px; cursor: pointer; display: flex; gap: 9px; align-items: baseline; }
+.combo li:hover, .combo li.is-sel { background: var(--accent-soft); }
+.combo li b { font-weight: 500; font-size: 14px; }
+.combo li span { font-size: 12.5px; color: var(--ink-3); }
+.combo li i { margin-left: auto; font-family: var(--mono); font-size: 11px; font-style: normal; color: var(--ink-3); }
+
+/* ------------------------------------------------------------------ ton */
+.tones { display: flex; gap: 8px; flex-wrap: wrap; }
+.tone {
+  flex: 1 1 150px; padding: 9px 13px; border: 1px solid var(--line); border-radius: 11px;
+  background: var(--paper-2); cursor: pointer; transition: .16s ease; position: relative;
+}
+.tone input { position: absolute; opacity: 0; pointer-events: none; }
+.tone span { display: block; font-size: 13.5px; font-weight: 550; }
+.tone em { display: block; font-size: 11.5px; font-style: normal; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tone:hover { border-color: var(--accent); }
+.tone.is-on { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.tone.is-on span { color: var(--accent-ink); }
+
+.options { display: flex; gap: 8px 22px; flex-wrap: wrap; margin-top: 15px; }
+.check { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; color: var(--ink-2); cursor: pointer; }
+.check input { appearance: none; width: 15px; height: 15px; border: 1px solid var(--ink-3); border-radius: 5px; background: var(--card); transition: .15s ease; flex: none; }
+.check input:checked { background: var(--accent); border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--card); }
+.check:hover { color: var(--ink); }
+
+.gloss { display: block; margin-top: 15px; }
+.gloss > span { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-3); margin-bottom: 6px; }
+.gloss textarea {
+  width: 100%; padding: 10px 13px; border: 1px solid var(--line); border-radius: 11px;
+  background: var(--paper-2); resize: vertical; font-size: 13.5px; line-height: 1.55;
+}
+.gloss textarea:focus { outline: none; border-color: var(--accent); background: var(--card); }
+
+.run { display: flex; align-items: center; gap: 11px; margin-top: 18px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border-radius: 11px;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  font-size: 14px; font-weight: 500; transition: .17s ease;
+}
+a.btn, a.btn:hover { text-decoration: none; }
+.btn svg { width: 17px; height: 17px; }
+.btn:hover { border-color: var(--ink-3); }
+.btn.primary { background: var(--primary-bg); border-color: var(--primary-bg); color: var(--primary-ink); }
+.btn.primary:hover { filter: brightness(1.12); }
+.btn.primary:disabled {
+  background: color-mix(in srgb, var(--primary-bg) 14%, var(--card));
+  border-color: var(--line); color: var(--ink-3); cursor: not-allowed;
+}
+.btn.ghost { background: transparent; }
+.btn.quiet { background: transparent; border-color: transparent; color: var(--ink-2); font-weight: 450; }
+.btn.quiet:hover { color: var(--ink); border-color: var(--line); }
+.btn.small { padding: 6px 12px; font-size: 12.5px; border-radius: 9px; }
+.hint { margin: 0; font-size: 12.5px; color: var(--ink-3); }
+.hint b { color: var(--ink-2); font-weight: 500; }
+
+/* ------------------------------------------------------------------ résultats */
+.results-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.result { border-top: 1px solid var(--line-2); padding: 16px 0 6px; }
+.result:first-child { border-top: 0; padding-top: 2px; }
+.result-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.result-head h3 { margin: 0; font-size: 14.5px; font-weight: 600; }
+.result-head .stat { font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.result-actions { margin-left: auto; display: flex; gap: 7px; }
+.diff { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+.pane { border: 1px solid var(--line-2); border-radius: 12px; overflow: hidden; background: var(--paper-2); }
+.pane header {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 7px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-3);
+  border-bottom: 1px solid var(--line-2); background: var(--card);
+}
+.pane pre {
+  margin: 0; padding: 13px; max-height: 260px; overflow: auto; white-space: pre-wrap; word-break: break-word;
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.72; color: var(--ink-2);
+}
+.pane.out { background: var(--card); }
+.pane.out pre { color: var(--ink); }
+.result.is-open .pane pre { max-height: 62vh; }
+.result.is-open .toggle::after { content: "replier"; }
+.toggle::after { content: "déployer"; }
+.toggle { border: 0; background: transparent; color: var(--accent-ink); font-size: 11.5px; text-transform: none; letter-spacing: 0; }
+.bin-note {
+  margin: 10px 0 0; font-size: 12.5px; color: var(--ink-3);
+  background: var(--paper-2); border: 1px dashed var(--line); border-radius: 10px; padding: 9px 12px;
+}
+.bin-note b { color: var(--ink-2); font-weight: 550; }
+
+/* ------------------------------------------------------------------ réglages */
+.sheet {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 22px;
+  background: color-mix(in srgb, var(--paper) 62%, rgba(20, 18, 15, .55));
+  backdrop-filter: blur(3px);
+}
+.sheet[hidden] { display: none; }
+.sheet-card {
+  width: min(680px, 100%); max-height: 88vh; overflow: auto; background: var(--card);
+  border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 40px 80px -40px rgba(20,18,15,.5);
+  padding: 22px 24px 18px;
+}
+.sheet-head { display: flex; align-items: center; gap: 10px; }
+.sheet-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.sheet-head .icon-btn { margin-left: auto; }
+.sheet-sub { margin: 6px 0 16px; font-size: 13px; color: var(--ink-2); }
+.engines { display: grid; gap: 9px; }
+.engine { border: 1px solid var(--line); border-radius: 13px; padding: 12px 14px; transition: .16s ease; }
+.engine.is-on { border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); background: var(--accent-soft); }
+.engine-top { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.engine-top input { accent-color: var(--accent); }
+.engine-top b { font-size: 14px; font-weight: 550; }
+.engine-top .badge { font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-3); border: 1px solid var(--line); border-radius: 6px; padding: 0 6px; }
+.engine-top .badge.on { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.engine-hint { margin: 5px 0 0 24px; font-size: 12.5px; color: var(--ink-3); }
+.engine-fields { display: grid; gap: 8px; margin: 11px 0 0 24px; }
+.engine.is-on:has(.engine-fields) { padding-bottom: 14px; }
+.field { display: grid; grid-template-columns: 168px 1fr; gap: 10px; align-items: center; }
+.field label { font-size: 12px; color: var(--ink-2); }
+.field input {
+  padding: 7px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper-2);
+  font-family: var(--mono); font-size: 12.5px; width: 100%;
+}
+.field input:focus { outline: none; border-color: var(--accent); background: var(--card); }
+.sheet-foot { display: flex; gap: 10px; align-items: center; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line-2); }
+.grow { flex: 1; }
+.probe-out { font-size: 12.5px; color: var(--ink-2); font-family: var(--mono); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.probe-out.err { color: var(--err); }
+.probe-out.ok { color: var(--ok); }
+
+/* ------------------------------------------------------------------ pied */
+footer {
+  max-width: 1080px; margin: 0 auto; padding: 6px 26px 46px;
+  display: flex; gap: 16px; justify-content: space-between; flex-wrap: wrap;
+  font-size: 12.5px; color: var(--ink-3);
+}
+footer p { margin: 0; max-width: 62ch; }
+.foot-links { display: flex; gap: 8px 14px; align-items: center; flex-wrap: wrap; }
+.linkbtn { border: 0; background: transparent; color: var(--ink-3); text-decoration: underline; text-underline-offset: 2px; padding: 0; font-size: 12.5px; }
+.linkbtn:hover { color: var(--accent-ink); }
+
+/* ------------------------------------------------------------------ toast */
+.toast {
+  position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 12px);
+  background: var(--ink); color: var(--paper); padding: 9px 15px; border-radius: 10px;
+  font-size: 13px; opacity: 0; transition: .24s ease; pointer-events: none; z-index: 50;
+  max-width: min(520px, 88vw); box-shadow: 0 18px 40px -18px rgba(0,0,0,.5);
+}
+.toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 720px) {
+  .topbar, main, footer { padding-left: 16px; padding-right: 16px; }
+  .langs { grid-template-columns: 1fr; }
+  .swap { justify-self: center; transform: rotate(90deg); }
+  .swap:hover { transform: rotate(270deg); }
+  .diff { grid-template-columns: 1fr; }
+  .field { grid-template-columns: 1fr; gap: 4px; }
+  .card { padding: 16px; }
+  .tabs { margin-left: 0; }
+  footer { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .drop { padding: 22px 12px 20px; }
+  .drop-formats { font-size: 10.5px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+</style>
+</head>
+<body>
+<a class="skip" href="#zone-travail">Aller au contenu</a>
+
+<header class="topbar">
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M3 20.5c6-12 22-12 26 0" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>
+      <path d="M3 25.5h26M9.5 21.4v4.1M16 19.6v5.9M22.5 21.4v4.1" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".62"/>
+    </svg>
+    <div class="brand-text">
+      <h1>Passerelle</h1>
+      <p>Traduction de fichiers — sans compte, sans historique.</p>
+    </div>
+  </div>
+  <div class="top-actions">
+    <button class="chip" id="engineChip" title="Choisir le moteur de traduction">
+      <span class="swatch" id="engineSwatch"></span><span id="engineChipLabel">Automatique</span>
+    </button>
+    <button class="icon-btn" id="openSettings" aria-label="Réglages">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 13.6a7.8 7.8 0 0 0 0-3.2l1.7-1.2-1.8-3.1-2 .8a7.9 7.9 0 0 0-2.7-1.6L14.3 3H9.7l-.3 1.7a7.9 7.9 0 0 0-2.7 1.6l-2-.8L2.9 9.2l1.7 1.2a7.8 7.8 0 0 0 0 3.2L2.9 14.8l1.8 3.1 2-.8a7.9 7.9 0 0 0 2.7 1.6l.3 1.7h4.6l.3-1.7a7.9 7.9 0 0 0 2.7-1.6l2 .8 1.8-3.1-1.7-1.2Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="zone-travail">
+
+  <!-- 1 · dépôt --------------------------------------------------------- -->
+  <section class="card" id="cardInput">
+    <div class="card-head">
+      <span class="step">1</span>
+      <h2>Vos fichiers</h2>
+      <div class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" id="tabFiles" class="tab is-on">Fichiers</button>
+        <button role="tab" aria-selected="false" id="tabText" class="tab">Texte collé</button>
+      </div>
+    </div>
+
+    <div id="paneFiles">
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Déposer des fichiers ou cliquer pour choisir">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <path d="M24 32V14m0 0-6 6m6-6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M10 32v3a4 4 0 0 0 4 4h20a4 4 0 0 0 4-4v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <p class="drop-title">Glissez vos fichiers ici</p>
+        <p class="drop-sub">ou <span class="link">parcourez votre disque</span></p>
+        <p class="drop-formats">.txt · .md · .srt · .vtt · .csv · .json · .html · .xml · .yml · .po · .docx · .xlsx · .pdf</p>
+        <input type="file" id="fileInput" multiple hidden>
+      </div>
+      <ul class="files" id="fileList" aria-live="polite"></ul>
+      <p class="empty-note" id="fileNote">Le format est reconnu à l'extension ; la structure du fichier est reconstruite à l'identique.</p>
+    </div>
+
+    <div id="paneText" hidden>
+      <textarea id="pasteArea" rows="9" placeholder="Collez ici un e-mail, un article, une page… Votre texte reste dans la mémoire du serveur, le temps de la traduction."></textarea>
+      <div class="paste-foot">
+        <input type="text" id="pasteName" value="texte-colle" aria-label="Nom du fichier de sortie" spellcheck="false">
+        <span class="counter" id="pasteCount">0 caractère</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · langues -------------------------------------------------------- -->
+  <section class="card">
+    <div class="card-head">
+      <span class="step">2</span>
+      <h2>Les langues</h2>
+      <span class="aux" id="detectHint"></span>
+    </div>
+    <div class="langs">
+      <div class="lang" id="langSrc">
+        <label>Depuis</label>
+        <button class="lang-btn" data-role="lang-btn"><span class="lang-name">Détection automatique</span><span class="lang-code">auto</span></button>
+      </div>
+      <button class="swap" id="swapBtn" title="Inverser les langues" aria-label="Inverser les langues">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8h11l-3-3m3 3-3 3M17 16H6l3-3m-3 3 3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="lang" id="langTgt">
+        <label>Vers</label>
+        <button class="lang-btn" data-role="lang-btn"><span class="lang-name">Anglais</span><span class="lang-code">en</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · réglage -------------------------------------------------------- -->
+  <section class="card">
+    <div class="card-head">
+      <span class="step">3</span>
+      <h2>Le ton</h2>
+      <span class="aux">facultatif</span>
+    </div>
+    <div class="tones" role="radiogroup" aria-label="Registre de traduction" id="tones">
+      <label class="tone is-on"><input type="radio" name="tone" value="fluide" checked><span>Fluide</span><em>idiomatique, naturel</em></label>
+      <label class="tone"><input type="radio" name="tone" value="fidele"><span>Fidèle</span><em>proche de la phrase d'origine</em></label>
+      <label class="tone"><input type="radio" name="tone" value="soutenu"><span>Soutenu</span><em>registre formel</em></label>
+      <label class="tone"><input type="radio" name="tone" value="simple"><span>Simple</span><em>langue courante, phrases courtes</em></label>
+    </div>
+    <div class="options">
+      <label class="check"><input type="checkbox" id="optKeepLines"><span>Conserver les retours à la ligne</span></label>
+      <label class="check"><input type="checkbox" id="optHeader"><span>Traduire aussi l'en-tête des CSV</span></label>
+      <label class="check"><input type="checkbox" id="optParallel"><span>Traiter les fichiers en parallèle</span></label>
+    </div>
+    <label class="gloss">
+      <span>Glossaire ou consignes — transmis tel quel au moteur IA</span>
+      <textarea id="glossary" rows="2" placeholder="« pipeline » se dit « flux » ; vouvoyer le lecteur ; ne pas traduire Passerelle."></textarea>
+    </label>
+    <div class="run">
+      <button class="btn primary" id="translateBtn" disabled>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h10m0 0-4-4m4 4-4 4M14 6h4a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span id="translateLabel">Traduire</span>
+      </button>
+      <button class="btn ghost" id="cancelBtn" hidden>Interrompre</button>
+      <button class="btn quiet" id="clearBtn" hidden>Vider la liste</button>
+      <p class="hint" id="runHint"></p>
+    </div>
+  </section>
+
+  <!-- résultats ---------------------------------------------------------- -->
+  <section class="card results" id="results" hidden>
+    <div class="card-head">
+      <span class="step ok">✓</span>
+      <h2>Traductions</h2>
+      <div class="results-actions">
+        <button class="btn small" id="zipBtn" hidden>Tout télécharger (.zip)</button>
+        <button class="btn small quiet" id="collapseAll">Replier tout</button>
+      </div>
+    </div>
+    <div id="resultsBody"></div>
+  </section>
+</main>
+
+<footer>
+  <p>Les fichiers séjournent en mémoire du serveur jusqu'au téléchargement, puis sont oubliés. Vos clés d'API restent dans ce navigateur et ne transitent que vers le moteur que vous choisissez.</p>
+  <p class="foot-links">
+    <span id="cacheStat">cache vide</span>
+    <button class="linkbtn" id="clearCache">Vider le cache de correspondances</button>
+  </p>
+</footer>
+
+<!-- réglages ------------------------------------------------------------- -->
+<div class="sheet" id="settings" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-label="Réglages des moteurs">
+    <div class="sheet-head">
+      <h2>Moteurs de traduction</h2>
+      <button class="icon-btn" id="closeSettings" aria-label="Fermer">
+        <svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <p class="sheet-sub">Par défaut, Passerelle utilise un moteur public gratuit, au quota modeste. Une clé vous affranchit des limites et améliore nettement la qualité.</p>
+    <div class="engines" id="engineList"></div>
+    <div class="sheet-foot">
+      <button class="btn small" id="probeBtn">Tester le moteur</button>
+      <span class="probe-out" id="probeOut"></span>
+      <span class="grow"></span>
+      <button class="btn small ghost" id="settingsCancel">Annuler</button>
+      <button class="btn small primary" id="settingsSave">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* Passerelle — logique du poste de traduction. Vanilla JS, aucune dépendance. */
+(function () {
+  "use strict";
+
+  // ------------------------------------------------------------------ langues
+  const LANGS = [
+    ["fr", "français", "français"], ["en", "anglais", "English"], ["es", "espagnol", "español"],
+    ["de", "allemand", "Deutsch"], ["it", "italien", "italiano"], ["pt", "portugais", "português"],
+    ["nl", "néerlandais", "Nederlands"], ["pl", "polonais", "polski"], ["ru", "russe", "русский"],
+    ["uk", "ukrainien", "українська"], ["tr", "turc", "Türkçe"], ["ar", "arabe", "العربية"],
+    ["he", "hébreu", "עברית"], ["fa", "perse", "فارسی"], ["hi", "hindi", "हिन्दी"],
+    ["bn", "bengali", "বাংলা"], ["ur", "ourdou", "اردو"], ["zh", "chinois", "中文"],
+    ["ja", "japonais", "日本語"], ["ko", "coréen", "한국어"], ["vi", "vietnamien", "Tiếng Việt"],
+    ["th", "thaï", "ไทย"], ["id", "indonésien", "Bahasa Indonesia"], ["ms", "malais", "Bahasa Melayu"],
+    ["tl", "tagalog", "Tagalog"], ["sv", "suédois", "svenska"], ["no", "norvégien", "norsk"],
+    ["da", "danois", "dansk"], ["fi", "finnois", "suomi"], ["is", "islandais", "íslenska"],
+    ["et", "estonien", "eesti"], ["lv", "letton", "latviešu"], ["lt", "lituanien", "lietuvių"],
+    ["el", "grec", "ελληνικά"], ["cs", "tchèque", "čeština"], ["sk", "slovaque", "slovenčina"],
+    ["hu", "hongrois", "magyar"], ["ro", "roumain", "română"], ["bg", "bulgare", "български"],
+    ["hr", "croate", "hrvatski"], ["sr", "serbe", "српски"], ["sl", "slovène", "slovenščina"],
+    ["sq", "albanais", "shqip"], ["mk", "macédonien", "македонски"], ["ca", "catalan", "català"],
+    ["gl", "galicien", "galego"], ["eu", "basque", "euskara"], ["ga", "irlandais", "Gaeilge"],
+    ["cy", "gallois", "Cymraeg"], ["mt", "maltais", "Malti"], ["af", "afrikaans", "Afrikaans"],
+    ["sw", "swahili", "Kiswahili"], ["am", "amharique", "አማርኛ"], ["yo", "yoruba", "Yorùbá"],
+    ["zu", "zoulou", "isiZulu"], ["ne", "népalais", "नेपाली"], ["si", "cinghalais", "සිංහල"],
+    ["km", "khmer", "ខ្មែរ"], ["lo", "laotien", "ລາວ"], ["my", "birman", "မြန်မာ"],
+    ["ka", "géorgien", "ქართული"], ["hy", "arménien", "հայերեն"], ["az", "azerbaïdjanais", "Azərbaycan"],
+    ["kk", "kazakh", "қазақ тілі"], ["uz", "ouszbek", "oʻzbek"], ["mn", "mongol", "Монгол"],
+    ["la", "latin", "latina"], ["eo", "espéranto", "Esperanto"],
+  ];
+  const RTL = new Set(["ar", "he", "fa", "ur", "ps", "sd", "yi"]);
+  const NAME = { fr: "français", auto: "Détection automatique" };
+  LANGS.forEach(([c, f]) => (NAME[c] = f));
+  const label = (code) => NAME[code] || code;
+
+  const EXT_OK = new Set(["txt", "text", "md", "markdown", "rst", "srt", "vtt", "sub", "csv", "tsv",
+    "json", "jsonl", "html", "htm", "xml", "yml", "yaml", "toml", "ini", "cfg", "po", "docx", "xlsx",
+    "xlsm", "pdf", "log"]);
+
+  // taux de débit observés (caractères traduits par seconde) pour estimer la durée
+  const RATE = { auto: 320, mymemory: 380, libretranslate: 55, deepl: 2600, llm: 780 };
+
+  // ------------------------------------------------------------------ état
+  const LS = "passerelle.settings.v1";
+  const state = {
+    src: "auto",
+    tgt: "en",
+    tone: "fluide",
+    files: [],
+    busy: false,
+    engine: "auto",
+    mode: "files",
+    engines: [],
+    cache: {},
+  };
+  let config = load();
+  let uid = 0;
+
+  function load() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(LS) || "{}");
+      return Object.assign({
+        engine: "auto",
+        keepLines: false, translateHeader: false, parallel: false, glossary: "",
+        mymemory: { email: "" },
+        libretranslate: { base_url: "", api_key: "", min_interval: "" },
+        deepl: { api_key: "", base_url: "" },
+        llm: { base_url: "", api_key: "", model: "", temperature: "" },
+      }, raw);
+    } catch (e) {
+      return { engine: "auto", mymemory: {}, libretranslate: {}, deepl: {}, llm: {} };
+    }
+  }
+  function save() {
+    try { localStorage.setItem(LS, JSON.stringify(config)); } catch (e) { /* stockage privé */ }
+  }
+
+  // ------------------------------------------------------------------ DOM
+  const $ = (sel, root) => (root || document).querySelector(sel);
+  const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+  const el = (tag, cls, html) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (html !== undefined) node.innerHTML = html;
+    return node;
+  };
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const bytes = (n) => n < 1024 ? n + " o" : n < 1048576 ? (n / 1024).toFixed(n < 10240 ? 1 : 0) + " Ko" : (n / 1048576).toFixed(1) + " Mo";
+  const num = (n) => (n || 0).toLocaleString("fr-FR");
+  const dur = (s) => s < 60 ? Math.round(s) + " s" : Math.floor(s / 60) + " min " + String(Math.round(s % 60)).padStart(2, "0");
+
+  const dom = {
+    drop: $("#drop"), fileInput: $("#fileInput"), list: $("#fileList"), note: $("#fileNote"),
+    paneFiles: $("#paneFiles"), paneText: $("#paneText"), tabFiles: $("#tabFiles"), tabText: $("#tabText"),
+    paste: $("#pasteArea"), pasteName: $("#pasteName"), pasteCount: $("#pasteCount"),
+    srcBtn: $("#langSrc [data-role=lang-btn]"), tgtBtn: $("#langTgt [data-role=lang-btn]"),
+    swap: $("#swapBtn"), tones: $("#tones"),
+    optKeep: $("#optKeepLines"), optHeader: $("#optHeader"), optParallel: $("#optParallel"),
+    glossary: $("#glossary"),
+    run: $("#translateBtn"), runLabel: $("#translateLabel"), cancel: $("#cancelBtn"), clear: $("#clearBtn"),
+    hint: $("#runHint"), detect: $("#detectHint"),
+    results: $("#results"), resultsBody: $("#resultsBody"), zip: $("#zipBtn"), collapse: $("#collapseAll"),
+    settings: $("#settings"), engineList: $("#engineList"), probe: $("#probeBtn"), probeOut: $("#probeOut"),
+    chip: $("#engineChip"), chipLabel: $("#engineChipLabel"), chipSwatch: $("#engineSwatch"),
+    toast: $("#toast"), cacheStat: $("#cacheStat"),
+  };
+
+  let toastTimer = null;
+  function toast(msg, ms) {
+    dom.toast.textContent = msg;
+    dom.toast.hidden = false;
+    requestAnimationFrame(() => dom.toast.classList.add("is-on"));
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      dom.toast.classList.remove("is-on");
+      setTimeout(() => (dom.toast.hidden = true), 260);
+    }, ms || 2600);
+  }
+
+  // ------------------------------------------------------------------ onglets
+  function setTab(which) {
+    const files = which === "files";
+    dom.paneFiles.hidden = !files;
+    dom.paneText.hidden = files;
+    dom.tabFiles.classList.toggle("is-on", files);
+    dom.tabText.classList.toggle("is-on", !files);
+    dom.tabFiles.setAttribute("aria-selected", String(files));
+    dom.tabText.setAttribute("aria-selected", String(!files));
+    state.tab = files ? "files" : "text";
+    refreshRun();
+  }
+  dom.tabFiles.addEventListener("click", () => setTab("files"));
+  dom.tabText.addEventListener("click", () => setTab("text"));
+  setTab("files");
+
+  // ------------------------------------------------------------------ sélection de langue
+  function openCombo(anchor, current, onPick, allowAuto) {
+    closeCombo();
+    const box = el("div", "combo");
+    const search = el("input");
+    search.placeholder = "Rechercher une langue…";
+    const ul = el("ul");
+    box.append(search, ul);
+    box._anchor = anchor;
+    anchor.parentNode.appendChild(box);
+    anchor.dataset.open = "1";
+    search.value = current === "auto" && allowAuto ? "" : "";
+    let sel = 0, items = [];
+
+    function draw() {
+      const q = search.value.trim().toLowerCase();
+      items = [];
+      if (allowAuto && (!q || "auto détection detection automatique".includes(q))) items.push(["auto", "Détection automatique", "laisse Passerelle deviner"]);
+      LANGS.forEach(([c, f, n]) => {
+        if (!q || c.includes(q) || f.includes(q) || (n || "").toLowerCase().includes(q)) items.push([c, f, n]);
+      });
+      sel = Math.max(0, items.findIndex((it) => it[0] === current));
+      ul.innerHTML = items.map((it, i) =>
+        `<li data-i="${i}" class="${i === sel ? "is-sel" : ""}" dir="${RTL.has(it[0]) ? "rtl" : "ltr"}">
+           <b>${esc(it[1][0].toUpperCase() + it[1].slice(1))}</b><span>${esc(it[2] || "")}</span><i>${esc(it[0])}</i></li>`).join("");
+      const li = ul.children[Math.max(0, sel)];
+      if (li && li.scrollIntoView) li.scrollIntoView({ block: "nearest" });
+    }
+    function pick(i) {
+      if (items[i]) { onPick(items[i][0]); closeCombo(); }
+    }
+    ul.addEventListener("mousedown", (e) => {
+      const li = e.target.closest("li");
+      if (li) { e.preventDefault(); pick(+li.dataset.i); }
+    });
+    search.addEventListener("input", () => { sel = 0; draw(); });
+    search.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") { e.preventDefault(); sel = Math.min(sel + 1, items.length - 1); draw(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); sel = Math.max(sel - 1, 0); draw(); }
+      else if (e.key === "Enter") { e.preventDefault(); pick(sel); }
+      else if (e.key === "Escape") { closeCombo(); anchor.focus(); }
+    });
+    box.addEventListener("focusout", (e) => {
+      if (!document.contains(box)) return;
+      if (!box.contains(e.relatedTarget) && e.relatedTarget !== anchor) closeCombo();
+    });
+    draw();
+    setTimeout(() => search.focus(), 10);
+  }
+  let closingCombo = false;
+  function closeCombo() {
+    if (closingCombo) return;
+    closingCombo = true;
+    try {
+      // on sort le focus du panneau avant de le détacher : sinon le focusout
+      // déclenché par remove() rappelle closeCombo en plein milieu (Chrome lève
+      // alors un NotFoundError)
+      const active = document.activeElement;
+      if (active && active.closest && active.closest(".combo")) active.blur();
+      $$(".combo").forEach((n) => { if (n.parentNode) n.remove(); });
+      $$(".lang-btn").forEach((b) => { if (b.dataset) delete b.dataset.open; });
+    } finally {
+      closingCombo = false;
+    }
+  }
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeCombo(); });
+
+  function paintLang(which) {
+    const code = which === "src" ? state.src : state.tgt;
+    const btn = which === "src" ? dom.srcBtn : dom.tgtBtn;
+    $(".lang-name", btn).textContent = label(code);
+    $(".lang-code", btn).textContent = code;
+    btn.dir = RTL.has(code) ? "rtl" : "ltr";
+  }
+  dom.srcBtn.addEventListener("click", () => {
+    if (dom.srcBtn.dataset.open) return closeCombo();
+    openCombo(dom.srcBtn, state.src, (c) => { state.src = c; paintLang("src"); refreshRun(); }, true);
+  });
+  dom.tgtBtn.addEventListener("click", () => {
+    if (dom.tgtBtn.dataset.open) return closeCombo();
+    openCombo(dom.tgtBtn, state.tgt, (c) => {
+      state.tgt = c === "auto" ? "fr" : c; paintLang("tgt"); refreshRun();
+    }, false);
+  });
+  dom.swap.addEventListener("click", () => {
+    if (state.src === "auto") { toast("Choisissez une langue source explicite pour inverser."); return; }
+    const a = state.src; state.src = state.tgt; state.tgt = a;
+    paintLang("src"); paintLang("tgt"); refreshRun();
+  });
+
+  // ------------------------------------------------------------------ tons & options
+  dom.tones.addEventListener("change", (e) => {
+    const input = e.target.closest("input");
+    if (!input) return;
+    state.tone = input.value;
+    $$(".tone", dom.tones).forEach((l) => l.classList.toggle("is-on", $("input", l).checked));
+  });
+  [dom.optKeep, dom.optHeader, dom.optParallel].forEach((cb) => cb.addEventListener("change", () => {
+    config.keepLines = dom.optKeep.checked;
+    config.translateHeader = dom.optHeader.checked;
+    config.parallel = dom.optParallel.checked;
+    save();
+  }));
+  config.keepLines = !!config.keepLines; dom.optKeep.checked = config.keepLines;
+  config.translateHeader = !!config.translateHeader; dom.optHeader.checked = config.translateHeader;
+  config.parallel = !!config.parallel; dom.optParallel.checked = config.parallel;
+  dom.glossary.value = config.glossary || "";
+  dom.glossary.addEventListener("input", () => {
+    config.glossary = dom.glossary.value; save(); refreshRun();
+  });
+
+  // ------------------------------------------------------------------ dépôt de fichiers
+  function extOf(name) { return (name.split(".").pop() || "").toLowerCase(); }
+  function addFiles(list) {
+    const incoming = Array.from(list || []);
+    if (!incoming.length) return;
+    incoming.forEach((file) => {
+      if (state.files.some((f) => f.name === file.name && f.size === file.size)) return;
+      const known = EXT_OK.has(extOf(file.name));
+      state.files.push({
+        id: "f" + ++uid, file, name: file.name, size: file.size,
+        status: known ? "prêt" : "à vérifier", jobId: null, error: null, warnings: [], job: null,
+      });
+    });
+    renderList();
+    refreshRun();
+  }
+  dom.drop.addEventListener("click", () => dom.fileInput.click());
+  dom.drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); dom.fileInput.click(); } });
+  dom.fileInput.addEventListener("change", (e) => { addFiles(e.target.files); dom.fileInput.value = ""; });
+  ["dragenter", "dragover"].forEach((ev) => dom.drop.addEventListener(ev, (e) => { e.preventDefault(); dom.drop.classList.add("is-over"); }));
+  ["dragleave", "drop"].forEach((ev) => dom.drop.addEventListener(ev, (e) => { e.preventDefault(); dom.drop.classList.remove("is-over"); }));
+  dom.drop.addEventListener("drop", (e) => addFiles(e.dataTransfer && e.dataTransfer.files));
+  window.addEventListener("dragover", (e) => e.preventDefault());
+  window.addEventListener("drop", (e) => e.preventDefault());
+
+  function removeFile(id) {
+    const f = state.files.find((x) => x.id === id);
+    if (f && f.jobId && f.status === "traduction") cancelJob(f.jobId);
+    state.files = state.files.filter((x) => x.id !== id);
+    renderList(); refreshRun();
+  }
+
+  const ICON = {
+    file: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M14 3v5h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+    done: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    err: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5m0 3h.01M12 3 2.5 20h19L12 3Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+  };
+
+  function renderList() {
+    dom.list.innerHTML = "";
+    state.files.forEach((f) => {
+      const li = el("li");
+      li.dataset.id = f.id;
+      if (f.status === "traduction") li.classList.add("is-run");
+      if (f.status === "erreur") li.classList.add("is-err");
+      const pct = f.total ? Math.round((f.done / f.total) * 100) : 0;
+      const stateText = {
+        "prêt": bytes(f.size) + " · prêt",
+        "à vérifier": bytes(f.size) + " · format inconnu, on tentera",
+        "attente": "en file",
+        "traduction": esc(f.stage || "traduction") + (f.total ? ` · ${num(f.done)}/${num(f.total)} passages` : ""),
+        "termine": "traduit · " + bytes(f.outSize || f.size) + (f.elapsed >= 1 ? " · " + dur(f.elapsed) : " · instantané"),
+        "erreur": "échec",
+        "annule": "interrompu",
+      }[f.status] || esc(f.status);
+      const bar = f.status === "traduction"
+        ? `<div class="f-bar ${f.total ? "" : "indet"}"><i style="width:${pct}%"></i></div>` : "";
+      li.innerHTML = `
+        <span class="f-icon">${f.status === "termine" ? ICON.done : f.status === "erreur" ? ICON.err : ICON.file}</span>
+        <div class="f-main">
+          <div class="f-name">${esc(f.name)}</div>
+          <div class="f-meta"><span>${stateText}</span>${f.kindLabel ? `<span class="kind">${esc(f.kindLabel)}</span>` : ""}${f.eta ? `<span>≈ ${dur(f.eta)}</span>` : ""}</div>
+          ${bar}
+        </div>
+        <div class="f-state">
+          ${f.status === "traduction" ? '<span class="spin"></span>' : ""}
+          ${f.status === "termine" ? `<a class="btn small" href="${f.href || ('/api/jobs/' + f.jobId + '/file')}" download>Télécharger</a>` : ""}
+          <button class="f-x" title="Retirer" data-x="${f.id}">×</button>
+        </div>
+        ${f.error ? `<p class="f-err">${esc(f.error)}</p>` : ""}
+        ${!f.error && f.warnings && f.warnings.length ? `<p class="f-warn">${esc(f.warnings[0])}</p>` : ""}`;
+      dom.list.appendChild(li);
+    });
+    $$("[data-x]", dom.list).forEach((b) => b.addEventListener("click", () => removeFile(b.dataset.x)));
+    const ready = state.files.filter((f) => ["prêt", "erreur", "annule"].includes(f.status)).length;
+    dom.note.hidden = state.files.length > 0;
+    if (ready > 1) dom.note.textContent = ready + " fichiers en file.";
+  }
+
+  // texte collé ---------------------------------------------------------- #
+  dom.paste.addEventListener("input", () => {
+    const n = dom.paste.value.length;
+    dom.pasteCount.textContent = num(n) + " caractère" + (n > 1 ? "s" : "") + (n > 3000 ? " · moteur gratuit : comptez " + dur(n / (RATE[state.engine] || RATE.auto)) : "");
+  });
+
+  // ------------------------------------------------------------------ bouton
+  function pendingFiles() {
+    const fromPaste = state.tab === "text" && dom.paste.value.trim().length > 0;
+    return state.files.filter((f) => f.status === "prêt" || f.status === "erreur" || f.status === "annule").concat(fromPaste ? [{ id: "paste", paste: true }] : []);
+  }
+  function totalChars() {
+    let chars = 0;
+    state.files.forEach((f) => { if (f.status === "prêt" || f.status === "erreur") chars += Math.min(f.size, 4000000); });
+    if (state.tab === "text") chars += dom.paste.value.length;
+    return Math.round(chars * 1.05);
+  }
+  function refreshRun() {
+    const n = pendingFiles().length;
+    dom.run.disabled = !n || state.busy;
+    dom.runLabel.textContent = n > 1 ? `Traduire ${n} fichiers` : n === 1 ? "Traduire" : "Ajoutez un fichier";
+    dom.clear.hidden = state.files.length === 0 || state.busy;
+    const chars = totalChars();
+    const queued = state.files.filter((f) => ["prêt", "erreur", "annule"].includes(f.status)).length;
+    const extra = state.tab === "text" && queued
+      ? ` · ${queued} fichier${queued > 1 ? "s" : ""} encore en file, onglet Fichiers` : "";
+    if (!n) { dom.hint.textContent = ""; }
+    else {
+      const rate = RATE[config.engine] || RATE.auto;
+      const secs = chars / rate;
+      const engineName = (state.engines.find((e) => e.id === config.engine) || { label: "Automatique" }).label;
+      dom.hint.innerHTML = `<b>${num(chars)}</b> caractères environ · ${esc(engineName)} · ${
+        secs < 25 ? "quelques secondes" : "environ " + dur(secs)
+      }${state.src === "auto" ? " · langue source devinée" : ""}${extra}`;
+    }
+    if (state.src !== "auto") {
+      dom.detect.textContent = label(state.src) + " → " + label(state.tgt);
+    } else {
+      dom.detect.textContent = "source devinée · visé : " + label(state.tgt);
+    }
+  }
+  dom.clear.addEventListener("click", () => {
+    state.files = state.files.filter((f) => f.status === "traduction");
+    renderList(); refreshRun();
+  });
+
+  // ------------------------------------------------------------------ exécution
+  function metaHeader() {
+    const cfg = JSON.parse(JSON.stringify(config));
+    cfg.engine = config.engine;
+    cfg.tone = state.tone;
+    Object.keys(cfg).forEach((k) => {
+      if (cfg[k] && typeof cfg[k] === "object") {
+        cfg[k].tone = state.tone;
+        if (dom.glossary.value.trim()) cfg[k].glossary = dom.glossary.value.trim();
+      }
+    });
+    return cfg;
+  }
+  function entryTarget(entry) {
+    if (entry.paste) {
+      const clean = (dom.pasteName.value.trim() || "texte-colle").replace(/[^\w\-.À-ÿ ]+/g, "");
+      return { blob: new Blob([dom.paste.value], { type: "text/plain;charset=utf-8" }), name: clean + ".txt" };
+    }
+    return { blob: entry.file, name: entry.name };
+  }
+  function metaFor(name) {
+    return {
+      filename: name, src: state.src, tgt: state.tgt,
+      options: { keep_lines: !!config.keepLines, translate_header: !!config.translateHeader },
+      config: metaHeader(),
+    };
+  }
+
+  async function startJob(entry) {
+    const { blob, name } = entryTarget(entry);
+    const meta = encodeURIComponent(JSON.stringify(metaFor(name)));
+    const res = await fetch("/api/jobs", { method: "POST", headers: { "X-Meta": meta }, body: blob, signal: state.abort && state.abort.signal });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "HTTP " + res.status);
+    return data.id;
+  }
+
+  async function poll(jobId, onTick) {
+    const started = Date.now();
+    while (true) {
+      await new Promise((r) => setTimeout(r, Date.now() - started < 6000 ? 520 : 1100));
+      let job;
+      try { job = await (await fetch("/api/jobs/" + jobId, { signal: state.abort && state.abort.signal })).json(); }
+      catch (e) { if (state.abort && state.abort.signal.aborted) throw e; continue; }
+      onTick(job);
+      if (job.state === "termine" || job.state === "erreur" || job.state === "annule") return job;
+    }
+  }
+  async function cancelJob(jobId) {
+    try { await fetch("/api/jobs/" + jobId + "/cancel", { method: "POST" }); } catch (e) { /* déjà fini */ }
+  }
+
+  // ------------------------------------------------- aller-retours du mode sans état
+  // Sur un hébergeur « serverless », rien ne survit entre deux requêtes : c'est donc
+  // le navigateur qui tient les morceaux et rejoue le fichier à chaque appel.
+  async function postJson(url, obj, signal) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(obj),
+      signal,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) throw new Error(data.error || "HTTP " + res.status);
+    return data;
+  }
+  function toB64(blob) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result).slice(String(fr.result).indexOf(",") + 1));
+      fr.onerror = () => reject(new Error("Lecture du fichier impossible."));
+      fr.readAsDataURL(blob);
+    });
+  }
+  function fromB64(b64, type) {
+    const bin = atob(b64 || "");
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type: type || "application/octet-stream" });
+  }
+  const mimeOf = (name) => ({
+    txt: "text/plain", md: "text/markdown", srt: "application/x-subrip", vtt: "text/vtt",
+    csv: "text/csv", json: "application/json", html: "text/html", xml: "text/xml",
+  }[String(name || "").split(".").pop()] || "application/octet-stream");
+
+  // ZIP sans compression : en-tête local, table CRC-32, répertoire central. Écrit à
+  // la main pour que « tout télécharger » marche sans serveur pour le faire.
+  const CRC_T = (() => {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n += 1) {
+      let c = n;
+      for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+  function crc32(bytes) {
+    let c = 0xffffffff;
+    for (let i = 0; i < bytes.length; i += 1) c = CRC_T[(c ^ bytes[i]) & 255] ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  }
+  const cat = (list) => {
+    const total = list.reduce((a, b) => a + b.length, 0);
+    const out = new Uint8Array(total);
+    let at = 0;
+    list.forEach((b) => { out.set(b, at); at += b.length; });
+    return out;
+  };
+  function zipStore(files) {
+    const enc = new TextEncoder();
+    const le = (n) => new Uint8Array([n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255]);
+    const sh = (n) => new Uint8Array([n & 255, (n >>> 8) & 255]);
+    const now = new Date();
+    const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+    const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    const locals = [];
+    const centrals = [];
+    let offset = 0;
+    files.forEach((f) => {
+      const name = enc.encode(f.name);
+      const body = f.bytes;
+      const crc = crc32(body);
+      const head = cat([
+        le(0x04034b50), sh(20), sh(0x0800), sh(0), sh(dosTime), sh(dosDate),
+        le(crc), le(body.length), le(body.length), sh(name.length), sh(0),
+      ]);
+      locals.push(cat([head, name, body]));
+      centrals.push(cat([
+        le(0x02014b50), sh(20), sh(20), sh(0x0800), sh(0), sh(dosTime), sh(dosDate),
+        le(crc), le(body.length), le(body.length), sh(name.length),
+        sh(0), sh(0), sh(0), sh(0), le(0), le(offset), name,
+      ]));
+      offset += head.length + name.length + body.length;
+    });
+    const cd = cat(centrals);
+    const tail = cat([
+      le(0x06054b50), sh(0), sh(0), sh(files.length), sh(files.length),
+      le(cd.length), le(offset), sh(0),
+    ]);
+    return new Blob([cat(locals), cd, tail], { type: "application/zip" });
+  }
+
+  async function runStateless(entry, token, tick) {
+    const t0 = Date.now();
+    const { blob, name } = entryTarget(entry);
+    const meta = {
+      filename: name, src: state.src, tgt: state.tgt,
+      options: { keep_lines: !!config.keepLines, translate_header: !!config.translateHeader },
+      config: metaHeader(),
+    };
+    const file = await toB64(blob);
+    const plan = await postJson("/api/open", { meta, file }, state.abort && state.abort.signal);
+    const total = plan.count || 1;
+    const translations = Object.assign({}, plan.cached || {});
+    const used = [];
+    const warnings = [];
+    const win = plan.window || { items: 40, chars: 9000 };
+    const stopped = () => runToken !== token;
+    tick({ stage: plan.cached && !plan.pending.length ? "cache" : "traduction", total, done: Object.keys(translations).length });
+
+    let i = 0;
+    let chars = 0;
+    while (i < plan.pending.length) {
+      if (stopped()) return Object.assign(entry, { status: "annule", stage: "annulé" });
+      const group = [];
+      let room = 0;
+      while (i < plan.pending.length && group.length < win.items
+             && room + (plan.pending[i].t || "").length <= win.chars) {
+        room += (plan.pending[i].t || "").length;
+        group.push(plan.pending[i]);
+        i += 1;
+      }
+      const res = await postJson("/api/translate", { meta, items: group.map((g) => g.t) }, state.abort && state.abort.signal);
+      chars += room;
+      res.translations.forEach((v, n) => { translations[String(group[n].i)] = v; });
+      (res.engines || []).forEach((e) => { if (!used.includes(e)) used.push(e); });
+      (res.errors || []).forEach((w) => { if (!warnings.includes(w)) warnings.push(w); });
+      const engineName = (state.engines.find((e) => e.id === res.engine) || { label: res.engine }).label;
+      tick({
+        stage: "traduction · " + (engineName || ""),
+        total, done: Math.min(total, Object.keys(translations).length), warnings: warnings.slice(),
+      });
+    }
+
+    const out = await postJson("/api/build", { meta, file, translations }, state.abort && state.abort.signal);
+    const built = fromB64(out.b64, mimeOf(out.name));
+    Object.assign(entry, {
+      status: "termine", stage: "prêt", total, done: total, chars,
+      warnings, engines: used, elapsed: (Date.now() - t0) / 1000,
+      outSize: out.size, outName: out.name, kindLabel: out.kindLabel,
+      detected: plan.src,
+      result: {
+        name: plan.name, kind: out.kind, kindLabel: out.kindLabel, note: out.note,
+        in: out.in, out: out.out, outName: out.name, size: out.size,
+      },
+      href: URL.createObjectURL(built),
+      outBlob: built,
+    });
+    return undefined;
+  }
+
+  let runToken = 0;
+  async function runAll() {
+    const queue = pendingFiles();
+    if (!queue.length) return;
+    const token = ++runToken;
+    state.abort = new AbortController();
+    state.busy = true;
+    dom.run.disabled = true;
+    dom.cancel.hidden = false;
+    dom.results.hidden = true;
+    queue.forEach((f) => { if (!f.paste) { f.status = "attente"; f.error = null; f.warnings = []; } });
+    renderList();
+
+    const workers = config.parallel ? Math.min(3, queue.length) : 1;
+    const cursor = { i: 0 };
+    async function worker() {
+      while (cursor.i < queue.length) {
+        if (runToken !== token) return;
+        const entry = queue[cursor.i++];
+        if (!entry.paste) entry.status = "traduction";
+        renderList();
+        const tick = (p) => {
+          if (runToken !== token) return;
+          Object.assign(entry, p);
+          renderList();
+        };
+        try {
+          if (state.mode === "stateless") {
+            await runStateless(entry, token, tick);
+          } else {
+            const jobId = await startJob(entry);
+            entry.jobId = jobId;
+            const final = await poll(jobId, (job) => tick({
+              status: job.state === "attente" ? "attente" : "traduction",
+              stage: job.stage, total: job.total, done: job.done, eta: job.eta,
+              kindLabel: job.kindLabel, warnings: job.warnings || [],
+            }));
+            Object.assign(entry, {
+              status: final.state, total: final.total, done: final.done, stage: final.stage,
+              warnings: final.warnings || [], error: final.error, kindLabel: final.kindLabel,
+              outSize: final.outSize, outName: final.outName, elapsed: final.elapsed,
+              engines: final.engines, chars: final.chars, detected: final.src,
+            });
+            if (final.state === "termine") {
+              entry.result = await (await fetch("/api/jobs/" + jobId + "/result")).json();
+            }
+          }
+        } catch (err) {
+          const cut = runToken !== token || (err && err.name === "AbortError");
+          Object.assign(entry, cut
+            ? { status: "annule", stage: "annulé" }
+            : { status: "erreur", error: (err && err.message) || "erreur réseau" });
+        }
+        renderList();
+      }
+    }
+    await Promise.all(Array.from({ length: workers }, worker));
+    state.abort = null;
+    if (runToken !== token) return;
+    state.busy = false;
+    dom.cancel.hidden = true;
+    if (state.detectedFromServer === undefined) { /* noop */ }
+    const ok = queue.filter((q) => q.status === "termine");
+    if (ok.length) {
+      state.detected = ok[0].detected;
+      if (state.src === "auto" && ok[0].detected) {
+        dom.detect.textContent = "détecté : " + label(ok[0].detected) + " → " + label(state.tgt);
+      }
+    }
+    renderResults(queue);
+    refreshRun();
+    loadMeta();
+    const errs = queue.filter((q) => q.status === "erreur");
+    if (errs.length && !ok.length) toast(errs[0].error || "Échec de la traduction.", 5000);
+    else if (ok.length) toast(ok.length + " fichier" + (ok.length > 1 ? "s" : "") + " traduit" + (ok.length > 1 ? "s" : "") + " · " + dur(ok.reduce((a, b) => a + (b.elapsed || 0), 0)), 3400);
+  }
+  dom.run.addEventListener("click", runAll);
+  dom.cancel.addEventListener("click", async () => {
+    runToken++;
+    if (state.abort) state.abort.abort();   // coupe sur-le-champ les requêtes en vol
+    state.busy = false;
+    dom.cancel.hidden = true;
+    const ids = state.files.filter((f) => f.status === "traduction" && f.jobId).map((f) => f.jobId);
+    await Promise.all(ids.map(cancelJob));
+    state.files.forEach((f) => { if (f.status === "traduction") { f.status = "annule"; } });
+    renderList(); refreshRun();
+    toast("Interrompu.");
+  });
+  document.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !dom.run.disabled) { e.preventDefault(); runAll(); }
+  });
+
+  // ------------------------------------------------------------------ résultats
+  function renderResults(list) {
+    const done = (list || []).filter((f) => f.status === "termine" && f.result);
+    if (!done.length) { dom.results.hidden = true; return; }
+    dom.results.hidden = false;
+    dom.resultsBody.innerHTML = "";
+    done.forEach((f) => {
+      const box = el("div", "result is-open");
+      const r = f.result;
+      const words = (r.out || "").trim().split(/\s+/).filter(Boolean).length;
+      const engine = (f.engines || []).map((e) => (state.engines.find((x) => x.id === e) || { label: e }).label).join(" · ");
+      box.innerHTML = `
+        <div class="result-head">
+          <h3>${esc(r.name)}</h3>
+          <span class="stat">${esc(r.kindLabel || "")} · ${num((r.out || "").length)} car. · ${num(words)} mots${f.elapsed ? " · rendu en " + dur(Math.max(f.elapsed, 0.4)) : ""}${engine ? " · " + esc(engine) : ""}</span>
+          <div class="result-actions">
+            <button class="btn small quiet" data-copy>Copier</button>
+            <a class="btn small" href="${f.href || '/api/jobs/' + f.jobId + '/file'}" download>${esc(r.outName || "traduction")}</a>
+          </div>
+        </div>
+        ${f.warnings && f.warnings.length ? `<p class="f-warn" style="grid-column:auto">${esc(f.warnings[0])}</p>` : ""}
+        <div class="diff">
+          <div class="pane"><header><span>Original — ${esc(label(f.detected || state.src))}</span></header><pre>${esc(crop(r.in))}</pre></div>
+          <div class="pane out"><header><span>Traduction — ${esc(label(state.tgt))}</span><button class="toggle" data-t></button></header><pre>${esc(crop(r.out))}</pre></div>
+        </div>
+        ${r.size > 3000000 ? "" : ""}
+        ${["xlsx", "docx"].includes(r.kind) ? `<p class="bin-note">Fichier <b>${esc(r.kindLabel)}</b> reconstruit : l’aperçu texte sert de contrôle, le document complet s’obtient par le téléchargement.</p>` : ""}
+        ${r.kind === "pdf" ? `<p class="bin-note"><b>PDF :</b> le texte a été extrait puis traduit, la mise en page d’origine n’est pas reproduite.</p>` : ""}`;
+      $$("[data-t]", box).forEach((b) => b.addEventListener("click", () => box.classList.toggle("is-open")));
+      $("[data-copy]", box).addEventListener("click", async () => {
+        try { await navigator.clipboard.writeText(r.out || ""); toast("Traduction copiée."); }
+        catch (e) {
+          const ta = el("textarea"); ta.value = r.out || ""; document.body.appendChild(ta); ta.select();
+          document.execCommand("copy"); ta.remove(); toast("Traduction copiée.");
+        }
+      });
+      dom.resultsBody.appendChild(box);
+    });
+    const ids = done.map((f) => f.jobId).filter(Boolean);
+    dom.zip.hidden = done.length < 2;
+    dom.zip.dataset.ids = ids.join(",");
+    dom.zip.dataset.local = done.every((f) => f.outBlob) ? "1" : "";
+  }
+  function crop(text) {
+    const t = String(text || "");
+    return t.length > 9000 ? t.slice(0, 9000) + "\n\n… (aperçu tronqué — le fichier complet tient dans le téléchargement)" : t;
+  }
+  dom.zip.addEventListener("click", async () => {
+    if (dom.zip.dataset.local) {
+      const enc = new TextEncoder();
+      const seen = {};
+      const files = [];
+      for (const f of state.files.filter((x) => x.status === "termine" && x.outBlob)) {
+        let name = f.result ? f.result.outName : "traduction.txt";
+        if (seen[name]) { const dot = name.lastIndexOf("."); name = name.slice(0, dot) + "-" + (++seen[name]) + name.slice(dot); }
+        else seen[name] = 1;
+        files.push({ name, bytes: enc.encode(await f.outBlob.text()) });
+      }
+      const url = URL.createObjectURL(zipStore(files));
+      const a = document.createElement("a");
+      a.href = url; a.download = "passerelle-traductions.zip"; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 8000);
+      return;
+    }
+    window.location.href = "/api/zip?ids=" + dom.zip.dataset.ids;
+  });
+  dom.collapse.addEventListener("click", () => $$(".result", dom.resultsBody).forEach((b) => b.classList.remove("is-open")));
+
+  // ------------------------------------------------------------------ réglages
+  function renderEngines() {
+    dom.engineList.innerHTML = "";
+    if (!state.engines.length) {
+      dom.engineList.innerHTML = '<p class="engine-hint" style="margin-left:0">Lecture du catalogue des moteurs…</p>';
+      return;
+    }
+    state.engines.forEach((e) => {
+      const box = el("div", "engine" + (config.engine === e.id ? " is-on" : ""));
+      box.dataset.id = e.id;
+      const needsKey = e.needsKey && !e.ready;
+      const fields = e.fields || [];
+      box.innerHTML = `
+        <label class="engine-top">
+          <input type="radio" name="enginePick" value="${e.id}" ${config.engine === e.id ? "checked" : ""}>
+          <b>${esc(e.label)}</b>
+          <span class="badge ${e.ready ? "on" : ""}">${e.id === "auto" ? "défaut" : e.ready ? (e.needsKey ? "clé reconnue" : "sans clé") : "clé requise"}</span>
+        </label>
+        <p class="engine-hint">${esc(e.hint || "")}</p>
+        ${config.engine === e.id && fields.length ? `<div class="engine-fields">${fields.map((fd) => fieldHtml(e.id, fd)).join("")}</div>` : ""}`;
+      dom.engineList.appendChild(box);
+    });
+    $$("input[name=enginePick]", dom.engineList).forEach((input) => input.addEventListener("change", () => {
+      config.engine = input.value; save(); renderEngines(); refreshRun(); updateChip();
+    }));
+    $$(".field input", dom.engineList).forEach((input) => input.addEventListener("input", () => {
+      const eng = input.dataset.eng, key = input.dataset.key;
+      config[eng] = config[eng] || {};
+      config[eng][key] = input.value;
+    }));
+  }
+  function fieldHtml(eng, fd) {
+    const val = (config[eng] && config[eng][fd.name]) || "";
+    return `<div class="field"><label for="fld-${eng}-${fd.name}">${esc(fd.label)}</label>
+      <input id="fld-${eng}-${fd.name}" data-eng="${eng}" data-key="${fd.name}" type="${fd.type}"
+        value="${esc(val)}" placeholder="${esc(fd.placeholder || "")}" ${fd.type === "password" ? 'autocomplete="off" spellcheck="false"' : ""}></div>`;
+  }
+  function updateChip() {
+    const e = state.engines.find((x) => x.id === config.engine) || {};
+    dom.chipLabel.textContent = e.id === "auto" ? "Automatique" : (e.label || config.engine);
+    dom.chipSwatch.className = "swatch " + (e.ready ? (e.needsKey ? "key" : "free") : "");
+  }
+  let metaRetry = 0;
+  async function loadMeta() {
+    try {
+      const res = await fetch("/api/meta", { headers: { "X-Config": encodeURIComponent(JSON.stringify(config)) } });
+      const meta = await res.json();
+      state.engines = meta.engines || [];
+      state.cache = meta.cache || {};
+      state.mode = (meta.mode === "stateless") ? "stateless" : "files";
+      state.maxUpload = (meta.limits || {}).maxUpload || 8388608;
+      metaRetry = 0;
+      try { localStorage.setItem(LS + ".catalogue", JSON.stringify(state.engines)); } catch (e) {}
+      dom.cacheStat.textContent = state.cache.pairs ? `cache : ${num(state.cache.pairs)} correspondances gardées en mémoire locale` : "cache : rien de conservé pour l’instant";
+      updateChip();
+      if (dom.settings.hidden === false) renderEngines();
+    } catch (e) {
+      // le serveur redémarre peut-être : on retente une fois, en douceur
+      if (metaRetry < 2) { metaRetry += 1; setTimeout(loadMeta, 1500 * metaRetry); }
+    }
+  }
+  const openSheet = () => {
+    dom.settings.hidden = false;
+    renderEngines();
+    dom.probeOut.textContent = "";
+    loadMeta().then(renderEngines);
+  };
+  dom.chip.addEventListener("click", openSheet);
+  $("#openSettings").addEventListener("click", openSheet);
+  $("#closeSettings").addEventListener("click", () => (dom.settings.hidden = true));
+  $("#settingsCancel").addEventListener("click", () => { save(); dom.settings.hidden = true; });
+  $("#settingsSave").addEventListener("click", async () => {
+    save();
+    await loadMeta();
+    dom.settings.hidden = true;
+    renderEngines();
+    toast("Réglages enregistrés dans ce navigateur.");
+  });
+  dom.settings.addEventListener("click", (e) => { if (e.target === dom.settings) dom.settings.hidden = true; });
+  dom.probe.addEventListener("click", async () => {
+    dom.probeOut.className = "probe-out";
+    dom.probeOut.textContent = "test en cours…";
+    save();
+    try {
+      const res = await fetch("/api/engine/probe", { method: "POST", headers: { "X-Config": encodeURIComponent(JSON.stringify(config)) }, body: JSON.stringify(config) });
+      const data = await res.json();
+      if (data.ok) {
+        dom.probeOut.className = "probe-out ok";
+        dom.probeOut.textContent = (data.label || "") + " ✓ — " + (data.sample || "").slice(0, 70);
+      } else {
+        dom.probeOut.className = "probe-out err";
+        dom.probeOut.textContent = (data.label || "moteur") + " ✗ " + (data.error || "erreur");
+        if (data.fallback && data.fallback.ok) dom.probeOut.textContent += " · repli " + data.fallback.label + " ✓";
+      }
+    } catch (e) {
+      dom.probeOut.className = "probe-out err";
+      dom.probeOut.textContent = "serveur injoignable";
+    }
+  });
+  $("#clearCache").addEventListener("click", async () => {
+    await fetch("/api/cache/clear", { method: "POST" });
+    await loadMeta();
+    toast("Cache de correspondances vidé.");
+  });
+
+  // ------------------------------------------------------------------ démo / amorçage
+  try {
+    const seeded = JSON.parse(localStorage.getItem(LS + ".catalogue") || "[]");
+    if (Array.isArray(seeded) && seeded.length) state.engines = seeded;
+  } catch (e) { /* premier lancement */ }
+  paintLang("src"); paintLang("tgt");
+  renderList(); refreshRun(); loadMeta();
+  window.addEventListener("focus", loadMeta);
+})();
+
+</script>
+</body>
+</html>

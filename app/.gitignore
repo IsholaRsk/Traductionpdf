@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+data/
+vendor/__pycache__/
+.vercel/
+.env.local
+tests/navigateur/node_modules/
+tests/navigateur/rendu/

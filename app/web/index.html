@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--META-->
+<title>Passerelle — traduction de fichiers</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%237E8E7A'/%3E%3Cpath d='M8 20c3-7 13-7 16 0' stroke='%23FAF8F4' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M8 24h16' stroke='%23FAF8F4' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<!--CSS-->
+</head>
+<body>
+<a class="skip" href="#zone-travail">Aller au contenu</a>
+
+<header class="topbar">
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M3 20.5c6-12 22-12 26 0" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>
+      <path d="M3 25.5h26M9.5 21.4v4.1M16 19.6v5.9M22.5 21.4v4.1" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".62"/>
+    </svg>
+    <div class="brand-text">
+      <h1>Passerelle</h1>
+      <p>Traduction de fichiers — sans compte, sans historique.</p>
+    </div>
+  </div>
+  <div class="top-actions">
+    <button class="chip" id="engineChip" title="Choisir le moteur de traduction">
+      <span class="swatch" id="engineSwatch"></span><span id="engineChipLabel">Automatique</span>
+    </button>
+    <button class="icon-btn" id="openSettings" aria-label="Réglages">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 13.6a7.8 7.8 0 0 0 0-3.2l1.7-1.2-1.8-3.1-2 .8a7.9 7.9 0 0 0-2.7-1.6L14.3 3H9.7l-.3 1.7a7.9 7.9 0 0 0-2.7 1.6l-2-.8L2.9 9.2l1.7 1.2a7.8 7.8 0 0 0 0 3.2L2.9 14.8l1.8 3.1 2-.8a7.9 7.9 0 0 0 2.7 1.6l.3 1.7h4.6l.3-1.7a7.9 7.9 0 0 0 2.7-1.6l2 .8 1.8-3.1-1.7-1.2Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="zone-travail">
+
+  <!-- 1 · dépôt --------------------------------------------------------- -->
+  <section class="card" id="cardInput">
+    <div class="card-head">
+      <span class="step">1</span>
+      <h2>Vos fichiers</h2>
+      <div class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" id="tabFiles" class="tab is-on">Fichiers</button>
+        <button role="tab" aria-selected="false" id="tabText" class="tab">Texte collé</button>
+      </div>
+    </div>
+
+    <div id="paneFiles">
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Déposer des fichiers ou cliquer pour choisir">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <path d="M24 32V14m0 0-6 6m6-6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M10 32v3a4 4 0 0 0 4 4h20a4 4 0 0 0 4-4v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <p class="drop-title">Glissez vos fichiers ici</p>
+        <p class="drop-sub">ou <span class="link">parcourez votre disque</span></p>
+        <p class="drop-formats">.txt · .md · .srt · .vtt · .csv · .json · .html · .xml · .yml · .po · .docx · .xlsx · .pdf</p>
+        <input type="file" id="fileInput" multiple hidden>
+      </div>
+      <ul class="files" id="fileList" aria-live="polite"></ul>
+      <p class="empty-note" id="fileNote">Le format est reconnu à l'extension ; la structure du fichier est reconstruite à l'identique.</p>
+    </div>
+
+    <div id="paneText" hidden>
+      <textarea id="pasteArea" rows="9" placeholder="Collez ici un e-mail, un article, une page… Votre texte reste dans la mémoire du serveur, le temps de la traduction."></textarea>
+      <div class="paste-foot">
+        <input type="text" id="pasteName" value="texte-colle" aria-label="Nom du fichier de sortie" spellcheck="false">
+        <span class="counter" id="pasteCount">0 caractère</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · langues -------------------------------------------------------- -->
+  <section class="card">
+    <div class="card-head">
+      <span class="step">2</span>
+      <h2>Les langues</h2>
+      <span class="aux" id="detectHint"></span>
+    </div>
+    <div class="langs">
+      <div class="lang" id="langSrc">
+        <label>Depuis</label>
+        <button class="lang-btn" data-role="lang-btn"><span class="lang-name">Détection automatique</span><span class="lang-code">auto</span></button>
+      </div>
+      <button class="swap" id="swapBtn" title="Inverser les langues" aria-label="Inverser les langues">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8h11l-3-3m3 3-3 3M17 16H6l3-3m-3 3 3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="lang" id="langTgt">
+        <label>Vers</label>
+        <button class="lang-btn" data-role="lang-btn"><span class="lang-name">Anglais</span><span class="lang-code">en</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · réglage -------------------------------------------------------- -->
+  <section class="card">
+    <div class="card-head">
+      <span class="step">3</span>
+      <h2>Le ton</h2>
+      <span class="aux">facultatif</span>
+    </div>
+    <div class="tones" role="radiogroup" aria-label="Registre de traduction" id="tones">
+      <label class="tone is-on"><input type="radio" name="tone" value="fluide" checked><span>Fluide</span><em>idiomatique, naturel</em></label>
+      <label class="tone"><input type="radio" name="tone" value="fidele"><span>Fidèle</span><em>proche de la phrase d'origine</em></label>
+      <label class="tone"><input type="radio" name="tone" value="soutenu"><span>Soutenu</span><em>registre formel</em></label>
+      <label class="tone"><input type="radio" name="tone" value="simple"><span>Simple</span><em>langue courante, phrases courtes</em></label>
+    </div>
+    <div class="options">
+      <label class="check"><input type="checkbox" id="optKeepLines"><span>Conserver les retours à la ligne</span></label>
+      <label class="check"><input type="checkbox" id="optHeader"><span>Traduire aussi l'en-tête des CSV</span></label>
+      <label class="check"><input type="checkbox" id="optParallel"><span>Traiter les fichiers en parallèle</span></label>
+    </div>
+    <label class="gloss">
+      <span>Glossaire ou consignes — transmis tel quel au moteur IA</span>
+      <textarea id="glossary" rows="2" placeholder="« pipeline » se dit « flux » ; vouvoyer le lecteur ; ne pas traduire Passerelle."></textarea>
+    </label>
+    <div class="run">
+      <button class="btn primary" id="translateBtn" disabled>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h10m0 0-4-4m4 4-4 4M14 6h4a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span id="translateLabel">Traduire</span>
+      </button>
+      <button class="btn ghost" id="cancelBtn" hidden>Interrompre</button>
+      <button class="btn quiet" id="clearBtn" hidden>Vider la liste</button>
+      <p class="hint" id="runHint"></p>
+    </div>
+  </section>
+
+  <!-- résultats ---------------------------------------------------------- -->
+  <section class="card results" id="results" hidden>
+    <div class="card-head">
+      <span class="step ok">✓</span>
+      <h2>Traductions</h2>
+      <div class="results-actions">
+        <button class="btn small" id="zipBtn" hidden>Tout télécharger (.zip)</button>
+        <button class="btn small quiet" id="collapseAll">Replier tout</button>
+      </div>
+    </div>
+    <div id="resultsBody"></div>
+  </section>
+</main>
+
+<footer>
+  <p>Les fichiers séjournent en mémoire du serveur jusqu'au téléchargement, puis sont oubliés. Vos clés d'API restent dans ce navigateur et ne transitent que vers le moteur que vous choisissez.</p>
+  <p class="foot-links">
+    <span id="cacheStat">cache vide</span>
+    <button class="linkbtn" id="clearCache">Vider le cache de correspondances</button>
+  </p>
+</footer>
+
+<!-- réglages ------------------------------------------------------------- -->
+<div class="sheet" id="settings" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-label="Réglages des moteurs">
+    <div class="sheet-head">
+      <h2>Moteurs de traduction</h2>
+      <button class="icon-btn" id="closeSettings" aria-label="Fermer">
+        <svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <p class="sheet-sub">Par défaut, Passerelle utilise un moteur public gratuit, au quota modeste. Une clé vous affranchit des limites et améliore nettement la qualité.</p>
+    <div class="engines" id="engineList"></div>
+    <div class="sheet-foot">
+      <button class="btn small" id="probeBtn">Tester le moteur</button>
+      <span class="probe-out" id="probeOut"></span>
+      <span class="grow"></span>
+      <button class="btn small ghost" id="settingsCancel">Annuler</button>
+      <button class="btn small primary" id="settingsSave">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<!--JS-->
+</body>
+</html>
