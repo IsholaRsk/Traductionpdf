@@ -1,0 +1,16 @@
+{
+  "name": "passerelle-tests-navigateur",
+  "private": true,
+  "type": "module",
+  "description": "Suites pilotant la vraie page : jsdom (logique) et Chrome headless (rendu).",
+  "scripts": {
+    "test:ui": "node ui.test.mjs http://127.0.0.1:8000",
+    "test:sans-etat": "node stateless.test.mjs http://127.0.0.1:8011",
+    "test:en-ligne": "node stateless.test.mjs https://passerelle-vert.vercel.app",
+    "captures": "node shots.mjs http://127.0.0.1:8000"
+  },
+  "dependencies": {
+    "jsdom": "^29.1.1",
+    "puppeteer-core": "^24.43.1"
+  }
+}
