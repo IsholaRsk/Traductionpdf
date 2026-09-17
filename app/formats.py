@@ -199,6 +199,44 @@ def rewrap(text, width):
     return "\n".join(out)
 
 
+def reflow_lines(text, widths):
+    """Repartit `text` en autant de lignes que `widths`, aux mêmes proportions.
+
+    Un sous-titre de deux lignes doit en faire deux après traduction : la forme
+    de la scène (et le calage à l'écran) tient là, pas seulement à l'horodatage.
+    """
+    mots = (text or "").split()
+    n = len(widths)
+    if n <= 1 or len(mots) < n:
+        return [text] if text else []
+    poids = [max(1.0, float(w)) for w in widths]
+    longueurs = [len(m) + 1 for m in mots]
+    total = float(sum(longueurs))             # chaque mot porte déjà son espace
+    cible_cumul, lignes, i, deja = [], [], 0, 0.0
+    acc = 0.0
+    for w in poids:
+        acc += total * w / sum(poids)
+        cible_cumul.append(acc)
+    for k in range(n):
+        reste = len(mots) - i
+        a_reserver = n - k - 1                 # une ligne au moins pour la suite
+        cible = cible_cumul[k]
+        pris = 0
+        while i + pris < len(mots) and (i + pris) < len(mots) - a_reserver:
+            si_je_le_prends = deja + longueurs[i + pris]
+            if pris and si_je_le_prends > cible:
+                break
+            deja = si_je_le_prends
+            pris += 1
+        pris = max(pris, 1)
+        pris = min(pris, reste - a_reserver) if reste - a_reserver > 0 else pris
+        lignes.append(" ".join(mots[i:i + pris]))
+        i += pris
+    if i < len(mots):                           # les mots de reste finissent sur la dernière ligne
+        lignes[-1] = (lignes[-1] + " " + " ".join(mots[i:])).strip()
+    return lignes
+
+
 # --------------------------------------------------------------------------- #
 # texte / Markdown / RST
 # --------------------------------------------------------------------------- #
@@ -312,7 +350,8 @@ class MarkdownDoc(Doc):
 class SubtitleDoc(Doc):
     kind = "srt"
     label = "Sous-titres"
-    note = "Numérotation, horodatages et en-têtes conservés."
+    note = ("Numérotation, horodatages et en-têtes conservés ; une scène de deux lignes "
+            "en reste une de deux, découpée aux proportions de l'original.")
 
     def __init__(self, name, text, is_vtt=False):
         super().__init__(name)
@@ -347,9 +386,11 @@ class SubtitleDoc(Doc):
             raise Unsupported("Aucun texte de sous-titre trouvé dans ce fichier.")
 
     def _flush(self, head, body_lines):
-        joined = " ".join(x.strip() for x in body_lines if x.strip())
+        corps = [x.strip() for x in body_lines if x.strip()]
+        joined = " ".join(corps)
         idx = self.add(joined)
-        self.cues.append(("cue", list(head), idx, joined))
+        # les largeurs d'origine servent à refaire le même nombre de lignes
+        self.cues.append(("cue", list(head), idx, joined, [len(x) for x in corps]))
 
     def rebuild(self, translations):
         out = []
@@ -357,10 +398,14 @@ class SubtitleDoc(Doc):
             if cue[0] == "raw":
                 out.extend(cue[1])
                 continue
-            _, head, idx, fallback = cue
+            _, head, idx, fallback, largeurs = cue
             out.extend(head)
             text = (translations[idx] or "").strip() or fallback
-            if text:
+            if not text:
+                continue
+            if len(largeurs) > 1:
+                out.extend(l for l in reflow_lines(text, largeurs) if l)
+            else:
                 out.append(text)
         body = "\n".join(out)
         body = re.sub(r"\n{3,}", "\n\n", body)

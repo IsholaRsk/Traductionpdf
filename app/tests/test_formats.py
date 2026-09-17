@@ -68,7 +68,29 @@ doc, data, name, body = roundtrip("film.srt", srt)
 out = decode(data)
 check("horodatages conservés", out.count("00:00:") == 4, repr(out))
 check("numérotation conservée", "1\n" in out and "2\n" in out, repr(out))
-check("texte traduit", "BONJOUR À TOUS. DEUXIÈME LIGNE DU SOUS-TITRE." in out, repr(out))
+def corps_srt(txt):
+    """Nombre de lignes de texte par scène (en ignorant numéros et horodatages)."""
+    cues, current = [], []
+    for ln in txt.splitlines():
+        if ln.strip() == "":
+            if current:
+                cues.append(len(current))
+            current = []
+            continue
+        if "-->" in ln or ln.strip().isdigit():
+            continue
+        current.append(ln)
+    if current:
+        cues.append(len(current))
+    return cues
+
+
+plie = " ".join(l.strip() for l in out.splitlines()
+                if l.strip() and "-->" not in l and not l.strip().isdigit())
+check("texte traduit (mots tous remis, sur une ligne repliée)",
+      "BONJOUR À TOUS. DEUXIÈME LIGNE DU SOUS-TITRE." in plie, repr(plie))
+check("la scène de deux lignes en reste une de deux",
+      corps_srt(srt) == corps_srt(out) == [2, 1], (corps_srt(srt), corps_srt(out), repr(out)))
 check("deux blocs", out.strip().count("\n\n") >= 1, repr(out))
 
 print("\n· webvtt")

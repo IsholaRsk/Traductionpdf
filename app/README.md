@@ -173,7 +173,7 @@ Quatre suites, du plus proche du métal au plus proche du visiteur :
 
 ```bash
 cd app
-python3 tests/test_formats.py              # 65 garde-fous de structure, hors-ligne
+python3 tests/test_formats.py              # 66 garde-fous de structure, hors-ligne
 python3 server.py --port 8123 &            # serveur de test (mode file d'attente)
 python3 tests/test_api.py mymemory fr en   # 103 vérifications : cycle complet, formats réels
 python3 tests/check_failures.py 8123       # repli entre moteurs, quota, erreurs, annulation
