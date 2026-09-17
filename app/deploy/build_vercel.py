@@ -35,9 +35,11 @@ lxml>=5.2
 VERCEL_JSON = {
     "$schema": "https://openapi.vercel.sh/vercel.json",
     "framework": None,
+    # L'alias suit le déploiement : pas de `vercel alias set` à rejouer à chaque poussee.
+    "alias": "passerelle-vert.vercel.app",
     # Une seule fonction, un seul point d'entrée : tout ce qui n'est pas la page
     # statique (public/) lui est passé, chemins /api/* compris.
-    "functions": {"api/index.py": {"maxDuration": 60, "memory": 1024}},
+    "functions": {"api/index.py": {"maxDuration": 60}},
     "regions": ["cdg1"],
     "rewrites": [{"source": "/api/(.*)", "destination": "/api/index"}],
 }
