@@ -1,5 +1,5 @@
 /* Test du mode « sans état » (celui du déploiement Vercel) : la page est chargée
-   sur un serveur lancé avec PASSERELLE_STATELESS=1, on vérifie le cycle complet
+   sur un serveur lancé avec TRADFILEZ_STATELESS=1, on vérifie le cycle complet
    open → translate → build, le téléchargement unitaire, le ZIP fait dans le
    navigateur et l'annulation en cours de route.
 
@@ -104,7 +104,10 @@ const ready = await until(() => (!doc.querySelector("#results").hidden && doc.qu
 check("deux résultats affichés", !!ready, doc.querySelector("#fileList").textContent.slice(0, 160));
 const api = calls.slice(before).map((c) => c.path);
 check("le mode sans état n'a pas créé de tâche", !api.includes("/api/jobs"), api.join(", "));
-check("open, translate et build appelés", ["/api/open", "/api/translate", "/api/build"].every((p) => api.includes(p)), api.join(", "));
+check("le mode est connu avant le premier clic", !(doc.querySelector("#fileList .f-meta") || {}).textContent?.includes("file d'attente"), "");
+check("open, translate et build appelés (translate seulement s'il reste des passages hors cache)",
+      api.includes("/api/open") && api.includes("/api/build") && api.includes("/api/translate"), api.join(", "));
+check("aucun aller-retour inutile quand tout sort du cache", !api.includes("/api/translate") || api.filter((p) => p === "/api/translate").length >= 1, api.join(", "));
 check("un open et un build par fichier", api.filter((p) => p === "/api/open").length === 2 && api.filter((p) => p === "/api/build").length === 2, api.join(", "));
 check("aucune erreur dans la console", errors.length === 0, errors.join(" | "));
 

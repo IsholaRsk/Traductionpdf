@@ -1,4 +1,4 @@
-/* Passerelle — logique du poste de traduction. Vanilla JS, aucune dépendance. */
+/* TradFilez — logique du poste de traduction. Vanilla JS, aucune dépendance. */
 (function () {
   "use strict";
 
@@ -41,7 +41,8 @@
   const RATE = { auto: 320, mymemory: 380, libretranslate: 55, deepl: 2600, llm: 780 };
 
   // ------------------------------------------------------------------ état
-  const LS = "passerelle.settings.v1";
+  const LS = "tradfilez.settings.v1";
+  const LS_ANCIEN = "passerelle.settings.v1";   // clé de l'ancien nom, reprise une fois
   const state = {
     src: "auto",
     tgt: "en",
@@ -54,11 +55,21 @@
     cache: {},
   };
   let config = load();
+  try {
+    if (localStorage.getItem(LS + ".mode") === "stateless") state.mode = "stateless";
+  } catch (e) { /* stockage indisponible */ }
   let uid = 0;
 
   function load() {
     try {
-      const raw = JSON.parse(localStorage.getItem(LS) || "{}");
+      let raw = localStorage.getItem(LS);
+      if (raw === null && localStorage.getItem(LS_ANCIEN)) {
+        // le site s'appelait Passerelle : on reprend une fois les réglages de l'ancien nom
+        // (clé API comprises), puis on écrit sous le nom courant.
+        raw = localStorage.getItem(LS_ANCIEN);
+        try { localStorage.setItem(LS, raw); } catch (e) { /* stockage privé */ }
+      }
+      const cfg = JSON.parse(raw || "{}");
       return Object.assign({
         engine: "auto",
         keepLines: false, translateHeader: false, parallel: false, glossary: "",
@@ -66,7 +77,7 @@
         libretranslate: { base_url: "", api_key: "", min_interval: "" },
         deepl: { api_key: "", base_url: "" },
         llm: { base_url: "", api_key: "", model: "", temperature: "" },
-      }, raw);
+      }, cfg);
     } catch (e) {
       return { engine: "auto", mymemory: {}, libretranslate: {}, deepl: {}, llm: {} };
     }
@@ -150,7 +161,7 @@
     function draw() {
       const q = search.value.trim().toLowerCase();
       items = [];
-      if (allowAuto && (!q || "auto détection detection automatique".includes(q))) items.push(["auto", "Détection automatique", "laisse Passerelle deviner"]);
+      if (allowAuto && (!q || "auto détection detection automatique".includes(q))) items.push(["auto", "Détection automatique", "laisse TradFilez deviner"]);
       LANGS.forEach(([c, f, n]) => {
         if (!q || c.includes(q) || f.includes(q) || (n || "").toLowerCase().includes(q)) items.push([c, f, n]);
       });
@@ -574,6 +585,11 @@
   async function runAll() {
     const queue = pendingFiles();
     if (!queue.length) return;
+    if (!state.metaOk) {
+      // une instance qui démarre peut mettre une seconde à répondre : mieux vaut
+      // patienter un peu que traduire dans le mode que l'hébergeur ne sait pas tenir
+      await Promise.race([loadMeta(), new Promise((r) => setTimeout(r, 2500))]);
+    }
     const token = ++runToken;
     state.abort = new AbortController();
     state.busy = true;
@@ -722,7 +738,7 @@
       }
       const url = URL.createObjectURL(zipStore(files));
       const a = document.createElement("a");
-      a.href = url; a.download = "passerelle-traductions.zip"; a.click();
+      a.href = url; a.download = "tradfilez-traductions.zip"; a.click();
       setTimeout(() => URL.revokeObjectURL(url), 8000);
       return;
     }
@@ -781,6 +797,8 @@
       state.cache = meta.cache || {};
       state.mode = (meta.mode === "stateless") ? "stateless" : "files";
       state.maxUpload = (meta.limits || {}).maxUpload || 8388608;
+      state.metaOk = true;
+      try { localStorage.setItem(LS + ".mode", state.mode); } catch (e) { /* stockage privé */ }
       metaRetry = 0;
       try { localStorage.setItem(LS + ".catalogue", JSON.stringify(state.engines)); } catch (e) {}
       dom.cacheStat.textContent = state.cache.pairs ? `cache : ${num(state.cache.pairs)} correspondances gardées en mémoire locale` : "cache : rien de conservé pour l’instant";

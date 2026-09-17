@@ -1,4 +1,4 @@
-/* Passerelle — feuille de style : papier doux, contrastes bas, rien de superflu. */
+/* TradFilez — feuille de style : papier doux, contrastes bas, rien de superflu. */
 
 :root {
   --paper: #f6f4f0;
@@ -88,6 +88,10 @@ button { cursor: pointer; }
   margin: 0; font-size: 21px; font-weight: 600; letter-spacing: -.01em;
   font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
 }
+/* Le logotype est bicolore : « Trad » à l'encre, « Filez » au vert profond.
+   accent-ink et non accent : 8,5:1 sur la carte en clair, 11:1 en sombre. */
+.brand-text h1 .w-ink { color: var(--ink); }
+.brand-text h1 .w-sage { color: var(--accent-ink); }
 .brand-text p { margin: 1px 0 0; font-size: 13px; color: var(--ink-2); }
 .top-actions { display: flex; gap: 8px; align-items: center; }
 

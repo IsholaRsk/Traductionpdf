@@ -1,4 +1,4 @@
-# Passerelle — image minimale, une seule dépendance : Python.
+# TradFilez — image minimale, une seule dépendance : Python.
 FROM python:3.12-slim
 
 # Les bibliothèques optionnelles débloquent Word, Excel, PDF et le HTML proprement.

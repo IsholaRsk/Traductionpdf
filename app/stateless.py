@@ -1,6 +1,7 @@
-"""Passerelle — API sans état, pour les hébergeurs « serverless ».
+"""TradFilez — API sans état, pour les hébergeurs « serverless ».
 
-Sur Vercel ou AWS Lambda, chaque requête peut tomber sur une instance
+Sur un hébergeur sans état (Vercel, AWS Lambda), chaque requête peut tomber
+    sur une instance différente
 différente : la file de tâches en mémoire du serveur local n'a donc aucun sens.
 Ce module propose le même travail en trois appels indépendants, le navigateur
 gardant tout entre les deux :
@@ -10,7 +11,7 @@ gardant tout entre les deux :
     3. POST /api/build      fichier + traductions  →  fichier reconstruit
 
 Le cache de paires reste utilisé, mais seulement comme optimisation : sa perte
-ne casse rien. Les limites par appel (`PASSERELLE_WINDOW`, `PASSERELLE_WINDOW_CHARS`)
+ne casse rien. Les limites par appel (`TRADFILEZ_WINDOW`, `TRADFILEZ_WINDOW_CHARS`)
 existent pour finir une requête avant la mort du « runtime » de l'hébergeur.
 """
 
@@ -25,13 +26,13 @@ import formats as fmt
 
 def _num(name, default):
     try:
-        return max(1, int(os.environ.get(name, default)))
+        return max(1, int(eng.env(name, default)))
     except ValueError:
         return default
 
 
-MAX_ITEMS = _num("PASSERELLE_WINDOW", 60)
-MAX_CHARS = _num("PASSERELLE_WINDOW_CHARS", 12000)
+MAX_ITEMS = _num("window", 60)
+MAX_CHARS = _num("window_chars", 12000)
 PREVIEW_LIMIT = 24000
 
 

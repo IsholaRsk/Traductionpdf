@@ -51,7 +51,13 @@ const doc = win.document;
 await until(() => doc.querySelector("#translateBtn"));
 
 console.log("· rendu initial");
-check("page chargée", doc.title.includes("Passerelle"), doc.title);
+check("page chargée", doc.title.includes("TradFilez"), doc.title);
+const h1 = doc.querySelector(".brand-text h1");
+check("marque bicolore en deux moitiés", /Trad/.test(h1.querySelector(".w-ink")?.textContent || "") && /Filez/.test(h1.querySelector(".w-sage")?.textContent || ""), h1.innerHTML);
+const css = doc.querySelector("style").textContent;
+const ci = (css.match(/\.w-ink \{ color: ([^;]+);/)||[])[1];
+const cs = (css.match(/\.w-sage \{ color: ([^;]+);/)||[])[1];
+check("les deux moitiés du nom ont deux couleurs distinctes", !!ci && !!cs && ci !== cs, `${ci} / ${cs}`);
 check("CSS inliné", (doc.querySelector("style") || {}).textContent?.includes("--paper"), "pas de <style>");
 check("aucune erreur de script au chargement", errors.length === 0, errors.join(" | "));
 check("bouton désactivé sans fichier", doc.querySelector("#translateBtn").disabled);
@@ -112,7 +118,7 @@ doc.querySelector("#settingsSave").dispatchEvent(new win.MouseEvent("click", { b
 await until(() => doc.querySelector("#settings").hidden);
 check("réglages fermés après enregistrement", doc.querySelector("#settings").hidden);
 check("puce du moteur mise à jour", /DeepL/.test(doc.querySelector("#engineChipLabel").textContent), doc.querySelector("#engineChipLabel").textContent);
-check("clé conservée localement", JSON.parse(win.localStorage.getItem("passerelle.settings.v1")).deepl.api_key === "demo-key-sans-valeur", win.localStorage.getItem("passerelle.settings.v1"));
+check("clé conservée localement", JSON.parse(win.localStorage.getItem("tradfilez.settings.v1")).deepl.api_key === "demo-key-sans-valeur", win.localStorage.getItem("tradfilez.settings.v1"));
 
 // on remet le moteur automatique pour la traduction
 doc.querySelector("#openSettings").dispatchEvent(new win.MouseEvent("click", { bubbles: true }));
@@ -173,6 +179,28 @@ doc.querySelector("#fileList .f-x")?.dispatchEvent(new win.MouseEvent("click", {
 await until(() => doc.querySelectorAll("#fileList li").length === 0);
 check("liste vidée", doc.querySelectorAll("#fileList li").length === 0);
 check("bouton désactivé à nouveau", doc.querySelector("#translateBtn").disabled);
+
+console.log("\n· reprise des réglages de l'ancien nom du site");
+const dom2 = await JSDOM.fromURL(BASE + "/", {
+  runScripts: "dangerously", pretendToBeVisual: true, virtualConsole: new VirtualConsole(),
+  beforeParse(window) {
+    window.fetch = async (input, init) => {
+      let body = init && init.body;
+      if (body && typeof body.arrayBuffer === "function") body = Buffer.from(await body.arrayBuffer());
+      return globalThis.fetch(new URL(input, BASE).href, { ...init, body });
+    };
+    // l'utilisateur avait enregistré ses clés sous « passerelle.settings.v1 »
+    window.localStorage.setItem("passerelle.settings.v1", JSON.stringify({ engine: "mymemory", deepl: { api_key: "ancienne-cle" } }));
+  },
+});
+const win2 = dom2.window, doc2 = win2.document;
+await until(() => doc2.querySelector("#engineChipLabel"));
+const vu = await until(() => (/MyMemory/.test(doc2.querySelector("#engineChipLabel").textContent) ? true : null), 25000);
+check("le moteur de l'ancien enregistrement est retrouvé", !!vu, doc2.querySelector("#engineChipLabel").textContent);
+await until(() => win2.localStorage.getItem("tradfilez.settings.v1"));
+const migre = JSON.parse(win2.localStorage.getItem("tradfilez.settings.v1") || "{}");
+check("la clé DeepL est reprise sous le nouveau nom", (migre.deepl || {}).api_key === "ancienne-cle", JSON.stringify(migre).slice(0, 120));
+win2.close();
 
 console.log("\n· erreurs de console");
 check("aucune erreur JS pendant la session", errors.length === 0, errors.join(" | "));

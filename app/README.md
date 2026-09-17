@@ -1,4 +1,4 @@
-# Passerelle — traduire ses fichiers, sobrement
+# TradFilez — traduire ses fichiers, sobrement
 
 Un petit site autonome qui traduit les fichiers que l'on dépose dans une autre langue,
 en **conservant la structure** du document : sous-titres, tableaux, JSON, Markdown,
@@ -9,6 +9,12 @@ aucun tracker, aucun compte. Clair le jour, sombre la nuit (`prefers-color-schem
 
 ---
 
+> Le site s'appelait **Passerelle**. Seuls les visuels ont bougé, une exception :
+> les variables d'environnement ont un nouveau préfixe, `TRADFILEZ_`, et l'ancien
+> `PASSERELLE_` reste lu pour ne casser aucun démarrage existant. De même, les réglages
+> enregistrés dans le navigateur sous l'ancienne clé `passerelle.settings.v1` sont repris
+> une fois sous `tradfilez.settings.v1` (les clés d'API ne se perdent pas au changement de nom).
+
 ## Démarrer
 
 ```bash
@@ -18,7 +24,7 @@ python3 server.py --port 8000        # ouvre http://localhost:8000
 
 C'est tout : le serveur n'utilise que la bibliothèque standard de Python 3.9+.
 Quatre modules complémentaires améliorent la prise en charge des formats, **s'ils sont
-présents ils sont utilisés, sinon Passerelle les ignore poliment** :
+présents ils sont utilisés, sinon TradFilez les ignore poliment** :
 
 | module | apport |
 |---|---|
@@ -78,8 +84,9 @@ suggestion du contournement (enregistrer en `.docx`, ou coller dans l'onglet Tex
 
 ## Déployer
 
-Le site tourne déjà en ligne sur **https://passerelle-vert.vercel.app** (projet Vercel
-`passerelle-rsk`). Le revoir chez soi tient en une commande ; le publier ailleurs aussi.
+Le site tourne déjà en ligne sur **https://tradfilez.vercel.app** (projet Vercel
+`tradfilez` ; l'ancien lien `passerelle-vert.vercel.app` suit les déploiements
+lui aussi). Le revoir chez soi tient en une commande ; le publier ailleurs aussi.
 
 ### Vercel — l'hébergement sans état
 
@@ -91,7 +98,7 @@ du mode local (`tests/test_stateless.py` le vérifie).
 
 ```bash
 python3 deploy/build_vercel.py                    # régénère deploy/vercel/ depuis les sources
-cd deploy/vercel && npx vercel deploy --prod      # ou : vercel link --project passerelle-rsk
+cd deploy/vercel && npx vercel deploy --prod      # ou : vercel link --project tradfilez
 ```
 
 `deploy/shim.py` n'ajoute aucune logique métier : il branche les routes de `server.py`
@@ -99,7 +106,7 @@ sur Flask, la seule forme que Vercel sait exécuter. Trois choses en découlent 
 
 * **fichiers ≤ 3 Mo** — le corps de requête de l'hébergeur est plafonné à 4,5 Mo et le
   fichier y voyage encodé en base64 (+33 %) ;
-* **60 s par requête** — d'où `PASSERELLE_WINDOW=30` passages traduits par lot, le reste
+* **60 s par requête** — d'où `TRADFILEZ_WINDOW=30` passages traduits par lot, le reste
   à l'appel suivant ;
 * **cache dans `/tmp`** d'une instance : il accélère les répétitions, il ne compte pas.
 
@@ -110,15 +117,15 @@ première chose à faire sur un lien public est d'indiquer une clé DeepL ou IA 
 ### Docker, fly.io — avec file d'attente
 
 ```bash
-docker build -t passerelle app
-docker run --rm -p 8000:8000 -v passerelle-cache:/data -e PASSERELLE_DIR=/data passerelle
+docker build -t tradfilez app
+docker run --rm -p 8000:8000 -v tradfilez-cache:/data -e TRADFILEZ_DIR=/data tradfilez
 
 cd app && fly launch && fly deploy        # fly.toml fourni : volume, arrêt la nuit
 # Render / Railway / Koyeb : image Docker, ou build `pip install -r app/requirements.txt`
 # et démarrage `cd app && python3 server.py` — le serveur lit $PORT tout seul.
 ```
 
-Le serveur n'a besoin que de `PORT` et d'un répertoire inscriptible (`PASSERELLE_DIR`).
+Le serveur n'a besoin que de `PORT` et d'un répertoire inscriptible (`TRADFILEZ_DIR`).
 Derrière un proxy (nginx, Cloudflare), relever `client_max_body_size` à 12 Mo pour
 laissés passer les .docx lourds. Les clés d'API voyagent du navigateur vers ce serveur :
 en public, mettre du HTTPS, et les saisir dans l'onglet Réglages de *son* navigateur
@@ -135,7 +142,7 @@ python3 server.py --port 8123 &            # serveur de test (mode file d'attent
 python3 tests/test_api.py mymemory fr en   # 103 vérifications : cycle complet, formats réels
 python3 tests/check_failures.py 8123       # repli entre moteurs, quota, erreurs, annulation
 
-PASSERELLE_STATELESS=1 PASSERELLE_DIR=/tmp/pl python3 server.py --port 8011 &
+TRADFILEZ_STATELESS=1 TRADFILEZ_DIR=/tmp/pl python3 server.py --port 8011 &
 python3 tests/test_stateless.py http://127.0.0.1:8011   # 28 : API sans état + parité avec le job
 ```
 
@@ -153,12 +160,12 @@ node shots.mjs http://127.0.0.1:8000             # captures PNG dans tests/navig
 visiteur, chez lui, obtient bien un fichier traduit :
 
 ```bash
-node stateless.test.mjs https://passerelle-vert.vercel.app
+node stateless.test.mjs https://tradfilez.vercel.app
 ```
 
 ## Limites assumées
 
-* Le moteur gratuit a un quota par IP : en cas de dépassement, Passerelle bascule sur le
+* Le moteur gratuit a un quota par IP : en cas de dépassement, TradFilez bascule sur le
   démon public pour les fichiers courts, sinon s'arrête en le disant (plutôt que de rendre
   un fichier cru pour avoir l'air d'avoir traduit).
 * Un PDF devient un fichier texte : la mise en page d'origine n'est pas reproduite.

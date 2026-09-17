@@ -1,6 +1,6 @@
 """Adaptateur d'hébergement sans état (Vercel, AWS Lambda…).
 
-Vercel ne sait lancer qu'une fonction par requête ; les routes de Passerelle
+Vercel ne sait lancer qu'une fonction par requête ; les routes de TradFilez
 vivent dans une classe BaseHTTPRequestHandler. Plutôt que de les réécrire, on
 fabrique un gestionnaire factice : sa « socket » est deux Buffer en mémoire et
 on relit les octets qu'il émet. Ainsi `server.py`, `formats.py`, `engines.py`
@@ -22,14 +22,14 @@ for _d in (HERE, os.path.dirname(HERE)):
 
 # /tmp est le seul répertoire inscriptible d'une fonction Vercel ; le cache de
 # paires n'est qu'une optimisation, sa perte ne casse rien.
-os.environ.setdefault("PASSERELLE_DIR", "/tmp")
-os.environ.setdefault("PASSERELLE_STATELESS", "1")
+os.environ.setdefault("TRADFILEZ_DIR", "/tmp")
+os.environ.setdefault("TRADFILEZ_STATELESS", "1")
 # Le corps de requête est plafonné côté hébergeur (4,5 Mo) et le fichier y
 # voyage en base64 (+33 %) : on descend la limite, l'interface la lit.
-os.environ.setdefault("PASSERELLE_MAX_BODY", str(3 * 1024 * 1024))
+os.environ.setdefault("TRADFILEZ_MAX_BODY", str(3 * 1024 * 1024))
 # Une fonction est tuée au-delà de maxDuration : on borne le travail par requête.
-os.environ.setdefault("PASSERELLE_WINDOW", "30")
-os.environ.setdefault("PASSERELLE_WINDOW_CHARS", "6000")
+os.environ.setdefault("TRADFILEZ_WINDOW", "30")
+os.environ.setdefault("TRADFILEZ_WINDOW_CHARS", "6000")
 
 import server as core  # noqa: E402  (importé après les variables d'environnement)
 from flask import Flask, Response, request  # noqa: E402

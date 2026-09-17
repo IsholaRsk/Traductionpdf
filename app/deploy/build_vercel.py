@@ -35,8 +35,9 @@ lxml>=5.2
 VERCEL_JSON = {
     "$schema": "https://openapi.vercel.sh/vercel.json",
     "framework": None,
-    # L'alias suit le déploiement : pas de `vercel alias set` à rejouer à chaque poussee.
-    "alias": "passerelle-vert.vercel.app",
+    # Les alias suivent le déploiement : pas de `vercel alias set` à rejouer à chaque poussée.
+    # L'ancien nom reste servi, au cas où le lien aurait déjà été partagé.
+    "alias": ["tradfilez.vercel.app", "passerelle-vert.vercel.app"],
     # Une seule fonction, un seul point d'entrée : tout ce qui n'est pas la page
     # statique (public/) lui est passé, chemins /api/* compris.
     "functions": {"api/index.py": {"maxDuration": 60}},
@@ -101,7 +102,7 @@ sur Flask, la forme que Vercel sait exécuter.
 Trois conséquences de l'hébergement sans état, toutes voulues :
 
 * le navigateur tient la file de traduction (trois allers-retours par fichier :
-  `open`, `translate`, `build`) — voir `PASSERELLE_STATELESS=1` ;
+  `open`, `translate`, `build`) — voir `TRADFILEZ_STATELESS=1` ;
 * le cache de paires vit dans `/tmp` d'une instance : il accélère, il ne compte pas ;
 * un fichier est limité à 3 Mo (le corps de requête de l'hébergeur est plafonné
   à 4,5 Mo et le fichier y voyage encodé en base64).

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Passerelle — serveur de traduction de fichiers.
+"""TradFilez — serveur de traduction de fichiers.
 
 Ne dépend que de la bibliothèque standard (plus pypdf / python-docx /
 openpyxl / beautifulsoup4 si présents). Rien n'est écrit sur disque hormis le
@@ -34,17 +34,17 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 WEB = os.path.join(ROOT, "web")
 def _env_size(name, default):
     try:
-        return max(1024, int(os.environ.get(name, default)))
+        return max(1024, int(eng.env(name, default)))
     except ValueError:
         return default
 
 
 # 8 Mo en local ; un hébergeur « serverless » limite le corps de requête, on
-# l'y descend via PASSERELLE_MAX_BODY (le fichier y voyage en base64, +33 %).
-MAX_UPLOAD = _env_size("PASSERELLE_MAX_BODY", 8 * 1024 * 1024)
-# Sur Vercel, aucune instance ne garde la file de tâches : le site bascule sur
+# l'y descend via TRADFILEZ_MAX_BODY (le fichier y voyage en base64, +33 %).
+MAX_UPLOAD = _env_size("max_body", 8 * 1024 * 1024)
+# Sur un hébergeur sans état, aucune instance ne garde la file de tâches : le site bascule sur
 # l'API sans état (open → translate → build), le navigateur tenant les morceaux.
-STATELESS = os.environ.get("PASSERELLE_STATELESS", "").lower() in ("1", "true", "oui")
+STATELESS = (eng.env("stateless", "") or "").lower() in ("1", "true", "oui")
 JOB_TTL = 3 * 3600
 MAX_JOBS = 60
 PREVIEW_LIMIT = 24000
@@ -395,7 +395,7 @@ def engine_catalog(config):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "Passerelle/1.0"
+    server_version = "TradFilez/1.0"
     protocol_version = "HTTP/1.1"
 
     def log_message(self, fmt_str, *args):
@@ -555,7 +555,7 @@ class Handler(BaseHTTPRequestHandler):
                     used.add(name)
                     zf.writestr(name, job.output)
             return self._send(200, buf.getvalue(), "application/zip",
-                              {"Content-Disposition": "attachment; filename*=UTF-8''passerelle-traductions.zip"})
+                              {"Content-Disposition": "attachment; filename*=UTF-8''tradfilez-traductions.zip"})
         return self._json({"error": "Route inconnue."}, 404)
 
     def api_stateless(self, path):
@@ -660,12 +660,12 @@ class Server(ThreadingHTTPServer):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Passerelle — traduction de fichiers")
+    parser = argparse.ArgumentParser(description="TradFilez — traduction de fichiers")
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
     parser.add_argument("--host", default="0.0.0.0")
     args = parser.parse_args()
     httpd = Server((args.host, args.port), Handler)
-    print(f"Passerelle à l'écoute sur http://{args.host}:{args.port}", flush=True)
+    print(f"TradFilez à l'écoute sur http://{args.host}:{args.port}", flush=True)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

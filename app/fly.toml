@@ -1,6 +1,6 @@
 # fly.io — `fly launch` ou `fly deploy` depuis ce dossier.
 # L'app n'a besoin que d'un port et d'un répertoire inscriptible pour son cache.
-app = "passerelle"
+app = "tradfilez"
 primary_region = "cdg"
 
 [build]
@@ -8,10 +8,10 @@ primary_region = "cdg"
 
 [env]
   PORT = "8000"
-  PASSERELLE_DIR = "/data"
+  TRADFILEZ_DIR = "/data"
 
 [mounts]
-  source = "passerelle_cache"
+  source = "tradfilez_cache"
   destination = "/data"
 
 [http_service]

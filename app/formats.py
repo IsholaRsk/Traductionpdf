@@ -1,4 +1,4 @@
-"""Passerelle — lecture et reconstruction des fichiers.
+"""TradFilez — lecture et reconstruction des fichiers.
 
 Chaque format renvoie une liste d'« unités » (chaînes d'une seule ligne) à
 traduire, puis reconstruit le fichier à partir des traductions en conservant

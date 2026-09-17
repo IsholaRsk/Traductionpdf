@@ -108,7 +108,7 @@ Ce matin-là, la pluie tombait sur les quais. Une femme en manteau vert est
 entrée, a commandé un thé, puis est restée près de la fenêtre sans rien dire.
 Henri lui a servi un biscuit sans le lui facturer. C'était un mardi.
 
-Note : le nom « Passerelle » ne doit pas être traduit.
+Note : le nom « TradFilez » ne doit pas être traduit.
 """
 
 SRT = """1
@@ -186,7 +186,7 @@ def v_txt(data, res, job):
     check("  txt : traduit en anglais", re.search(r"The (station )?cafe opens", text, re.I) or "coffee" in text.lower(), text[:140])
     check("  txt : deux paragraphes conserves", "\n\n" in text, repr(text[:80]))
     if ENGINE in ("deepl", "llm"):  # seul un moteur qui lit les consignes préserve un nom propre
-        check("  txt : nom propre preserve", "Passerelle" in text, text[-160:])
+        check("  txt : nom propre preserve", "TradFilez" in text, text[-160:])
     check("  txt : chiffre conserve", "six" in text.lower() or "6" in text, "")
 
 
@@ -259,7 +259,7 @@ def v_autodetect(job):
 
 
 def main():
-    print(f"Passerelle · {BASE} · moteur={ENGINE} · {SRC}→{TGT}")
+    print(f"TradFilez · {BASE} · moteur={ENGINE} · {SRC}→{TGT}")
     meta, _ = call("/api/meta")
     check("/api/meta repond", bool(meta.get("engines")), str(meta)[:160])
     ids = {e["id"]: e for e in meta["engines"]}

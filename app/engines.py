@@ -1,4 +1,4 @@
-"""Passerelle — moteurs de traduction et cache.
+"""TradFilez — moteurs de traduction et cache.
 
 Uniquement la bibliothèque standard (urllib, sqlite3) : l'application tourne
 sans dépendance installée. Les moteurs exposent tous la même méthode
@@ -18,7 +18,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-USER_AGENT = "Passerelle/1.0 (+traduction de fichiers)"
+USER_AGENT = "TradFilez/1.0 (+traduction de fichiers)"
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?。．！？؟])\s+")
 
 # --------------------------------------------------------------------------- #
@@ -140,9 +140,18 @@ class PairCache:
         ]
 
 
+def env(name, default=None):
+    """Variable d'environnement du projet : TRADFILEZ_<nom>, puis l'ancien préfixe."""
+    for prefix in ("TRADFILEZ_", "PASSERELLE_"):
+        value = os.environ.get(prefix + name.upper())
+        if value:
+            return value
+    return default
+
+
 def _cache_path():
-    """Répertoire du cache : `$PASSERELLE_DIR`, sinon `app/data` à côté du code."""
-    folder = (os.environ.get("PASSERELLE_DIR") or "").strip()
+    """Répertoire du cache : `$TRADFILEZ_DIR`, sinon `app/data` à côté du code."""
+    folder = (env("dir") or "").strip()
     if not folder:
         folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
     return os.path.join(folder, "pairs.sqlite3")
