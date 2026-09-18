@@ -537,6 +537,7 @@ class Handler(BaseHTTPRequestHandler):
                     "note": job.doc.note if job.doc else "",
                     "in": job.preview_in, "out": job.preview_out,
                     "outName": job.out_name, "size": len(job.output or b""),
+                    "total": job.total, "missing": job.failed,
                 })
             return self._json(job.public())
         if path == "/api/zip":

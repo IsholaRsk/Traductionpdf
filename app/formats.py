@@ -183,6 +183,16 @@ def paragraphs_of(lines):
     return blocks
 
 
+def aligner_fin(source, corps):
+    """Le corps rendu finit exactement comme la source : mêmes sauts de ligne finaux.
+
+    Un fichier qui terminait par un seul retour à la ligne ne doit pas en gagner
+    deux, ni en perdre : c'est visible dans un diff, donc c'est de la mise en page.
+    """
+    n = len(source) - len(source.rstrip("\n"))
+    return corps.rstrip("\n") + ("\n" * n if n else "")
+
+
 def rewrap(text, width):
     """Recoupe un paragraphe à la largeur d'origine (pour les .txt « durs »)."""
     if not text or width <= 12 or len(text) < 40:
@@ -284,8 +294,7 @@ class TextDoc(Doc):
             ) else "\n\n".join(parts)
             if re.search(r"\n{3,}", body):
                 body = re.sub(r"\n{3,}", "\n\n", body)
-            if self.text.endswith("\n") and not body.endswith("\n"):
-                body += "\n"
+            body = aligner_fin(self.text, body)
         return body.encode("utf-8"), self.out_name("_traduit"), self.preview_in(), body
 
 
@@ -337,8 +346,7 @@ class MarkdownDoc(Doc):
             body = re.sub(r"(```\n?)\n{2,}", r"\1", body)
         else:
             body = re.sub(r"\n{3,}", "\n\n", body)
-        if self.text.endswith("\n") and not body.endswith("\n"):
-            body += "\n"
+        body = aligner_fin(self.text, body)
         return body.encode("utf-8"), self.out_name("_traduit"), self.preview_in(), body
 
 
@@ -409,8 +417,7 @@ class SubtitleDoc(Doc):
                 out.append(text)
         body = "\n".join(out)
         body = re.sub(r"\n{3,}", "\n\n", body)
-        if self.text.endswith("\n") and not body.endswith("\n"):
-            body += "\n"
+        body = aligner_fin(self.text, body)
         return body.encode("utf-8"), self.out_name("_traduit"), self.preview_in(), body
 
 
@@ -627,8 +634,7 @@ class ConfigDoc(Doc):
             else:
                 out.append(f"{prefix}{quote}{value}{quote}".rstrip())
         body = "\n".join(out)
-        if self.text.endswith("\n") and not body.endswith("\n"):
-            body += "\n"
+        body = aligner_fin(self.text, body)
         return body.encode("utf-8"), self.out_name("_traduit"), self.preview_in(), body
 
 
@@ -685,8 +691,7 @@ class PoDoc(Doc):
             for k in range(start + 1, end):
                 lines[k] = '""'
         body = "\n".join(lines)
-        if self.text.endswith("\n") and not body.endswith("\n"):
-            body += "\n"
+        body = aligner_fin(self.text, body)
         return body.encode("utf-8"), self.out_name("_traduit"), self.preview_in(), body
 
 
@@ -939,7 +944,9 @@ class PdfDoc(Doc):
                 rect = m.Rect(x0, y0, max(x0 + 8, x1), max(y0 + 6, y1 + 2))
                 c = bloc["c"]
                 couleur = "#%02x%02x%02x" % ((c >> 16) & 255, (c >> 8) & 255, c & 255)
-                sens = " direction:rtl;text-align:right;" if _droitier(texte) else ""
+                # attention : en rtl, text-align:right = bord de départ = gauche.
+                # `direction:rtl` seul aligne à droite, comme il faut.
+                sens = " direction:rtl;" if _droitier(texte) else ""
                 f = bloc.get("f") or 0
                 gras, italique = f & 16, f & 2
                 famille = "monospace" if f & 8 else ("serif" if f & 4 else "sans-serif")

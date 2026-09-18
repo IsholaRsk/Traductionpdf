@@ -705,7 +705,8 @@
         </div>
         ${r.size > 3000000 ? "" : ""}
         ${r.note ? `<p class="bin-note"><b>${esc(r.kindLabel || "Fichier")} :</b> ${esc(r.note)}</p>`
-          : (["xlsx", "docx"].includes(r.kind) ? `<p class="bin-note">Fichier <b>${esc(r.kindLabel)}</b> reconstruit : l’aperçu texte sert de contrôle, le document complet s’obtient par le téléchargement.</p>` : "")}`;
+          : (["xlsx", "docx"].includes(r.kind) ? `<p class="bin-note">Fichier <b>${esc(r.kindLabel)}</b> reconstruit : l’aperçu texte sert de contrôle, le document complet s’obtient par le téléchargement.</p>` : "")}
+        ${r.missing ? `<p class="f-warn">${r.missing} passage${r.missing > 1 ? "s" : ""} sur ${r.total || "?"} n’ont pas été traduits : ils restent dans la langue d’origine dans le fichier rendu.</p>` : ""}`;
       $$("[data-t]", box).forEach((b) => b.addEventListener("click", () => box.classList.toggle("is-open")));
       $("[data-copy]", box).addEventListener("click", async () => {
         try { await navigator.clipboard.writeText(r.out || ""); toast("Traduction copiée."); }
@@ -836,7 +837,9 @@
       const data = await res.json();
       if (data.ok) {
         dom.probeOut.className = "probe-out ok";
-        dom.probeOut.textContent = (data.label || "") + " ✓ — " + (data.sample || "").slice(0, 70);
+        dom.probeOut.textContent = (data.label || "") + " ✓ — " + (data.sample || "").slice(0, 70)
+          + (data.quota ? " · quota du mois : " + data.quota.used.toLocaleString("fr-FR")
+            + " / " + data.quota.limit.toLocaleString("fr-FR") + " caractères" : "");
       } else {
         dom.probeOut.className = "probe-out err";
         dom.probeOut.textContent = (data.label || "moteur") + " ✗ " + (data.error || "erreur");

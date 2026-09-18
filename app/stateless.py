@@ -191,6 +191,13 @@ def build(meta, blob, translations):
     """Recolle les traductions et renvoie le fichier reconstruit."""
     doc = _doc(meta, blob)
     by_index = {int(k): v for k, v in (translations or {}).items()}
+    recus = [i for i in doc.todo if (by_index.get(i) or "").strip()]
+    if doc.todo and not recus:
+        # sans rien à reposer, on rendrait l'original en le croyant traduit : on refuse
+        raise StatelessError(
+            "Aucune traduction reçue pour ce fichier : relancez la traduction des segments."
+        )
+    manquants = len(doc.todo) - len(recus)
     full = []
     for i in range(doc.unit_count):
         if doc.units[i] is None:
@@ -211,4 +218,6 @@ def build(meta, blob, translations):
         "kindLabel": doc.label,
         "note": doc.note or "",
         "count": len(doc.todo),
+        "total": len(doc.todo),
+        "missing": manquants,
     }

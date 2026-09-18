@@ -279,6 +279,18 @@ else:
           "Port Report" in _t2 and "Le gardien allume le phare" in _t2, repr(_t2[:120]))
     _r2.close()
 
+    _d3 = fmt.load("rtl.pdf", _pdf, {})
+    _tr = ["" for _ in range(_d3.unit_count)]
+    _tr[0] = "تقرير ميناء كوتونو"
+    _o3, _n3, _i3, _x3 = _d3.rebuild(_tr)
+    _r3 = _m.open(stream=_o3, filetype="pdf")
+    _bbs = [b["bbox"] for b in _r3[0].get_text("dict")["blocks"] if b.get("type") == 0]
+    _droit = _d3.blocs[0]["r"][2]
+    check("un bloc de droite à gauche est collé au bord droit du bloc",
+          bool(_bbs) and abs(max(b[2] for b in _bbs) - _droit) < 26, (_bbs[:1], _droit))
+    check("  et l’arabe est bien écrit dans la page", bool(_bbs), _bbs[:1])
+    _r3.close()
+
     _scan = _m.open()
     _scan.new_page().insert_text((72, 90), " ".join(["x"] * 3), fontsize=1)
     _scan[0].get_pixmap()
@@ -289,6 +301,15 @@ else:
         check("PDF sans texte sélectionnable refusé avec un mot clair", False)
     except fmt.Unsupported as exc:
         check("PDF sans texte sélectionnable refusé avec un mot clair", "scan" in str(exc), str(exc))
+
+
+print("\n· fin de fichier : les sauts de ligne du bout comptent aussi")
+for _src, _fins in [("a\n\nb\n", 1), ("a\n\nb", 0), ("a\n\nb\n\n", 2)]:
+    _d = fmt.load("fins.txt", _src.encode(), {})
+    _data, _n, _pi, _po = _d.rebuild([(_d.units[i] or "").upper() for i in range(_d.unit_count)])
+    _t = _data.decode()
+    check(f"mêmes retours à la ligne finaux ({_fins})", len(_t) - len(_t.rstrip("\n")) == _fins, repr(_t))
+    check("  corps intact, rien de plus", _t.rstrip("\n") == _src.rstrip("\n").upper(), repr(_t))
 
 
 print()

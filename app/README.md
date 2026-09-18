@@ -69,12 +69,16 @@ navigateur ──POST /api/jobs (fichier + X-Meta)──▶  serveur
 |---|---|---|
 | **Automatique** (défaut) | — | chaîne DeepL → IA → MyMemory |
 | MyMemory | e-mail facultatif | gratuit, sans clé ; quota quotidien par IP, ~460 caractères par requête |
-| DeepL | clé API | meilleure qualité MT, lots de 50 lignes, 500 000 car./mois en gratuit |
+| DeepL | clé API | meilleure qualité MT, lots de 50 lignes, forfait gratuit sans carte (quota réel affiché par « Tester ») |
 | IA compatible OpenAI | URL + clé + modèle | OpenAI, Mistral, Groq, OpenRouter, Ollama… respecte le glossaire et le ton demandé |
 | LibreTranslate | URL (+ clé) | auto-hébergé = sans limite ; le démon public est bridé à 3 requêtes/minute |
 
-Le **ton** (fluide, fidèle, soutenu, simple) et le **glossaire** sont transmis à DeepL
-(`formality`) et au moteur IA ; les moteurs gratuits les ignorent.
+Le **ton** (fluide, fidèle, soutenu, simple) part chez DeepL sous forme de `formality`
+(valeurs admises seulement sur FR, DE, ES, IT, NL, PL, RU, PT-BR : le champ n'est envoyé
+que pour ces langues cibles) et dans la consigne du moteur IA. Le **glossaire** — une
+phrase libre du type « « pipeline » se dit « flux » ; vouvoyer le lecteur » — n'est lu que
+par le moteur IA, qui est le seul à pouvoir obéir à une consigne en texte libre : la case
+le dit explicitement. Les moteurs purement statistiques ignorent les deux.
 
 ## Quelle API gratuite fournir ?
 
@@ -83,12 +87,19 @@ saisit, rien n'est écrit sur le serveur. Par ordre d'intérêt :
 
 | fournisseur | ce qu'on obtient | où | réglage à saisir |
 |---|---|---|---|
-| **DeepL API Free** | 500 000 caractères/mois, sans carte | deepl.com/pro-api → « API Free » | clé seule ; `api-free.deepl.com` est déduit automatiquement de la clé qui finit par `:fx` |
+| **DeepL API Free** | 1 000 000 caractères/mois sur le compte testé (sans carte) | deepl.com/pro-api → « API Free » | clé seule ; `api-free.deepl.com` est déduit de la clé qui finit par `:fx` ; « Tester » affiche le quota réel |
 | **Google Gemini** (niveau gratuit) | quelques dizaines de requêtes/jour, sans carte | aistudio.google.com → « Get API key » | base `https://generativelanguage.googleapis.com/v1beta/openai/` · modèle `gemini-2.0-flash` |
 | **Groq** | très rapide, quota quotidien gratuit, sans carte | console.groq.com/keys | base `https://api.groq.com/openai/v1` · modèle `llama-3.3-70b-versatile` |
 | **OpenRouter** | catalogue de modèles portant `:free`, sans carte | openrouter.ai/keys | base `https://openrouter.ai/api/v1` · n'importe quel id `…:free` |
 | **MyMemory** (déjà actif) | ~5 000 mots/jour par IP, ~50 000 avec un e-mail | — | aucun, juste l'e-mail pour élargir |
 | **LibreTranslate auto-hébergé** | illimité, privé | `docker run -p 5000:5000 libretranslate/libretranslate` | base `http://127.0.0.1:5000` |
+
+Un compte DeepL API Free réellement branché sur le site (clé collée dans Réglages) :
+PDF de 2 pages traduit en anglais, en allemand avec le ton « soutenu » (donc avec
+`formality=more`, accepté) et en arabe (blocs alignés à droite), sous-titres SRT en
+deux lignes restés en deux lignes — moteur `deepl` annoncé par le serveur sur chaque
+tâche, et facturation DeepL exactement égale au texte envoyé (mesure : 193 caractères
+envoyés, 193 comptés sur `/v2/usage`).
 
 Vérifié le jour de la rédaction de ce README : `POST https://api-free.deepl.com/v2/translate`
 répond `403 Missing Authorization header`, `POST
@@ -169,17 +180,19 @@ plutôt que de les embarquer dans l'image.
 
 ## Tests
 
-Quatre suites, du plus proche du métal au plus proche du visiteur :
+Cinq suites, du plus proche du métal au plus proche du visiteur :
 
 ```bash
 cd app
-python3 tests/test_formats.py              # 66 garde-fous de structure, hors-ligne
+python3 tests/test_formats.py              # 74 garde-fous de structure, hors-ligne
+python3 tests/test_engines.py              # 35 vérifications hors-ligne : requêtes, codes de
+                                           # langue, hôtes, file de replis (aucun appel réseau)
 python3 server.py --port 8123 &            # serveur de test (mode file d'attente)
 python3 tests/test_api.py mymemory fr en   # 103 vérifications : cycle complet, formats réels
 python3 tests/check_failures.py 8123       # repli entre moteurs, quota, erreurs, annulation
 
 TRADFILEZ_STATELESS=1 TRADFILEZ_DIR=/tmp/pl python3 server.py --port 8011 &
-python3 tests/test_stateless.py http://127.0.0.1:8011   # 28 : API sans état + parité avec le job
+python3 tests/test_stateless.py http://127.0.0.1:8011   # 31 : API sans état + parité avec le job
 ```
 
 Les deux suites d'interface pilotent la vraie page (nécessitent `npm install jsdom`, et

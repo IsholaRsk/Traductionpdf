@@ -138,6 +138,19 @@ check("fichier mal encodé → 400", status == 400, err)
 status, err = post("/api/open", {"meta": META, "file": base64.b64encode(b"x" * (meta_srv["limits"]["maxUpload"] + 10)).decode()})
 check("fichier trop lourd → 413", status == 413, err)
 
+print("\n· un fichier rendu sans traduction est refusé, pas livré tel quel")
+_T = base64.b64encode("Premier paragraphe.\n\nDeuxième paragraphe.\n".encode()).decode()
+_M = {"filename": "garde.txt", "src": "fr", "tgt": "en", "config": {}, "options": {}}
+status, err = post("/api/build", {"meta": _M, "file": _T, "translations": {}})
+check("aucune traduction reçue → 400 expliqué",
+      status == 400 and "traduction" in str(err.get("error", "")).lower(), err)
+status, b = post("/api/build", {"meta": _M, "file": _T, "translations": {"0": "First paragraph."}})
+check("partiel : les manquants sont comptés et renvoyés",
+      status == 200 and b.get("missing") == 1 and b.get("total") == 2,
+      b if status != 200 else (b.get("missing"), b.get("total")))
+check("partiel : le passage manquant reste écrit, aucun trou",
+      status == 200 and "Deuxi" in b.get("out", ""), b.get("out", "")[:80])
+
 print("\n· rien n'est retenu entre deux appels")
 plan2 = get("/api/meta")
 check("aucune file de tâches côté serveur n'est nécessaire (cache seul)", "jobs" not in json.dumps(plan2), "surveillances")

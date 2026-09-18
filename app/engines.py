@@ -514,15 +514,18 @@ class LibreTranslateEngine(BaseEngine):
 class DeepLEngine(BaseEngine):
     id = "deepl"
     label = "DeepL"
-    hint = ("Votre clé. Qualité maximale, lots de 50 lignes. Le forfait DeepL API Free donne "
-            "500 000 caractères par mois, sans carte bancaire : collez la clé qui se termine par "
-            "« :fx », l'adresse api-free.deepl.com est choisie toute seule.")
+    hint = ("Votre clé. Qualité maximale, lots de 50 lignes. Le forfait « DeepL API Free » se "
+            "demande sans carte bancaire : collez la clé qui se termine par « :fx », l'adresse "
+            "api-free.deepl.com est choisie toute seule, et « Tester » affiche le quota réel du "
+            "compte (1 000 000 caractères par mois sur les comptes gratuits récents).")
     max_chars = 4500
     max_lines = 50
     concurrency = 3
     min_interval = 0.06
     needs_key = True
     _map = {"en": "EN-US", "pt": "PT-BR", "zh": "ZH", "gr": "EL"}
+    # langues pour lesquelles DeepL admet « formality » : le lui demander ailleurs = 400
+    _FORMEL = {"FR", "DE", "ES", "IT", "NL", "PL", "RU", "PT-BR"}
 
     def __init__(self, config=None):
         super().__init__(config)
@@ -533,15 +536,29 @@ class DeepLEngine(BaseEngine):
     def code(self, lang):
         return self._map.get(lang, (lang or "EN").upper())
 
-    def _api_lines(self, texts, src, tgt):
+    def code_src(self, lang):
+        """Code de langue source : DeepL n'accepte aucune région de ce côté-là.
+
+        « EN-US » est valable en cible seulement ; l'envoyer en source vaut une
+        erreur 400 « Value for 'source_lang' not supported », qui ferait basculer
+        silencieusement un fichier anglais sur un moteur moins bon.
+        """
+        return self.code(lang).split("-")[0]
+
+    def champs(self, src, tgt):
+        """Paramètres de /v2/translate, hors textes (testable hors-ligne)."""
         fields = {"auth_key": self.api_key, "target_lang": self.code(tgt)}
         if src and src != "auto":
-            fields["source_lang"] = self.code(src)
+            fields["source_lang"] = self.code_src(src)
         tone = (self.config.get("tone") or "").lower()
-        if tone in ("soutenu", "formel", "literary") and self.code(tgt) in {"FR", "DE", "ES", "IT", "NL", "PL", "RU", "PT-BR"}:
+        if tone in ("soutenu", "formel", "literary") and self.code(tgt) in self._FORMEL:
             fields["formality"] = "more"
-        elif tone in ("courant", "simple", "informel"):
+        elif tone in ("courant", "simple", "informel") and self.code(tgt) in self._FORMEL:
             fields["formality"] = "less"
+        return fields
+
+    def _api_lines(self, texts, src, tgt):
+        fields = self.champs(src, tgt)
         body = urllib.parse.urlencode(fields, quote_via=urllib.parse.quote)
         for text in texts:
             body += "&text=" + urllib.parse.quote(text, safe="")
@@ -564,6 +581,31 @@ class DeepLEngine(BaseEngine):
 
     def _api(self, text, src, tgt):  # pragma: no cover
         raise EngineError("DeepL traduit par lots de lignes", fatal=True, retryable=False)
+
+    def quota(self):
+        """Ce que le compte a consommé ce mois-ci (la lecture du quota n'est pas facturée)."""
+        if not self.api_key:
+            return None
+        try:
+            status, raw = http(self.base + "/v2/usage", method="GET", timeout=30,
+                               headers={"Authorization": "DeepL-Auth-Key " + self.api_key})
+        except Exception:  # noqa: BLE001
+            return None
+        if status != 200:
+            return None
+        data = _loads(raw) or {}
+        limite = data.get("character_limit") or 0
+        if not limite:
+            return None
+        used = data.get("character_count") or 0
+        return {"used": used, "limit": limite, "reste": max(0, limite - used)}
+
+    def probe(self):
+        out = super().probe()
+        usage = self.quota()
+        if usage:
+            out["quota"] = usage
+        return out
 
 
 class OpenAICompatEngine(BaseEngine):
