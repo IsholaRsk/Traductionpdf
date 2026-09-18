@@ -45,7 +45,7 @@ print("\n· texte brut")
 doc, data, name, body = roundtrip("note.txt", "Première ligne.\nDeuxième ligne.\n\nSecond paragraphe.")
 check("deux paragraphes reconnus", doc.unit_count == 3, f"{doc.unit_count}")
 check("sauts doubles conservés", "\n\n" in decode(data), repr(decode(data)))
-check("nom de sortie", name == "note_traduit.txt", name)
+check("le fichier rendu garde le nom exact fourni", name == "note.txt", name)
 lines = decode(data).split("\n")
 check("paragraphes fusionnés, blanc conservé", lines == ["PREMIÈRE LIGNE. DEUXIÈME LIGNE.", "", "SECOND PARAGRAPHE."], repr(lines))
 
@@ -256,7 +256,22 @@ else:
     _full = [TRAD.get(_d.units[i], "") if _d.units[i] else "" for i in range(_d.unit_count)]
     _out, _nom, _pin, _pout = _d.rebuild(_full)
     check("le fichier rendu est un PDF, pas un texte", _out[:5] == b"%PDF-" and _nom.endswith(".pdf"), _nom)
-    check("l’extension est conservée, le nom marqué « _traduit »", _nom == "rapport_traduit.pdf", _nom)
+    check("le nom et l’extension sont ceux du fichier fourni", _nom == "rapport.pdf", _nom)
+    _av = _m.open(stream=_pdf, filetype="pdf")[0].get_text("dict")
+    _ap = _m.open(stream=_out, filetype="pdf")[0].get_text("dict")
+    def _spans(d):
+        return [(sp["font"], round(sp["size"], 2), sp["color"])
+                for b in d["blocks"] if b.get("type") == 0 for ln in b["lines"] for sp in ln["spans"]]
+    check("police, corps et couleur d’origine conservés à l’identique",
+          _spans(_av)[:1] == _spans(_ap)[:1], (_spans(_av)[:1], _spans(_ap)[:1]))
+    def _corps(d):
+        return {round(sp["size"], 2) for b in d["blocks"] if b.get("type") == 0
+                for ln in b["lines"] for sp in ln["spans"]}
+
+    check("aucun corps n’apparaît hors de ceux du document (rien n’est rétréci)",
+          _corps(_ap) <= _corps(_av), (_corps(_av), _corps(_ap)))
+    check(" la page ne porte plus que la langue d’arrivée", "Rapport du port" not in
+          " ".join(pg.get_text() for pg in _m.open(stream=_out, filetype="pdf")), "")
     _r = _m.open(stream=_out, filetype="pdf")
     check("la pagination est conservée", _r.page_count == 2, _r.page_count)
     check("le format de page est conservé", tuple(round(v) for v in _r[0].rect) == (0, 0, 595, 842), tuple(_r[0].rect))
@@ -265,8 +280,20 @@ else:
     check("plus aucune trace du texte d’origine", "vingt heures" not in _txt and "vent tourne" not in _txt, _txt[:120])
     check("chaque page garde son bloc de titre en haut", all("72" not in p.get_text() for p in _r) and _r[1].get_text().strip().startswith("Appendix"), _r[1].get_text()[:40])
     check("le tracé d’origine (ligne) n’est pas effacé", len(_r[0].get_drawings()) >= 1, len(_r[0].get_drawings()))
-    check("la note d’avertissement décrit le vrai comportement", "mise en page" in _d.note and "pas reproduite" not in _d.note, _d.note)
+    check("la note décrit ce qui a été fait, sans fausse alarme",
+          "rectangle" in _d.note and "police du document" in _d.note and "pas reproduite" not in _d.note, _d.note)
     _r.close()
+    # et elle le dit quand la police n’a pas pu être rendue
+    _dsub = fmt.load("sub.pdf", _pdf, {})
+    _dsub.blocs = [dict(b) for b in _dsub.blocs]
+    for _b in _dsub.blocs:
+        _b["n"] = "PoliceInconnue"       # le fichier n’annonce plus une police connue…
+        _b["x"] = None                   # …et aucune ressource de page ne porte ce nom
+    _tsub = ["" for _ in range(_dsub.unit_count)]
+    for _b in _dsub.blocs:
+        _tsub[_b["u"]] = "Appendix"
+    _dsub.rebuild(_tsub)
+    check("la note dit honnêtement quand la police a dû être remplacée", "équivalent" in _dsub.note, _dsub.note[-130:])
 
     # un bloc non traduit ne doit pas laisser de trou dans le document
     _d2 = fmt.load("trou.pdf", _pdf, {})
@@ -284,10 +311,17 @@ else:
     _tr[0] = "تقرير ميناء كوتونو"
     _o3, _n3, _i3, _x3 = _d3.rebuild(_tr)
     _r3 = _m.open(stream=_o3, filetype="pdf")
-    _bbs = [b["bbox"] for b in _r3[0].get_text("dict")["blocks"] if b.get("type") == 0]
+    _sp = [sp for b in _r3[0].get_text("dict")["blocks"] if b.get("type") == 0
+           for ln in b["lines"] for sp in ln["spans"]
+           if any(ord(c) >= 0x0590 for c in sp["text"])]
+    check("l’arabe est façonné et non réduit à des « ? »",
+          bool(_sp) and not set("".join(x["text"] for x in _sp)) & set("?"),
+          "".join(x["text"] for x in _sp)[:36] if _sp else "aucun glyphe non latin dans la page")
+    _bbs = [sp["bbox"] for sp in _sp]
     _droit = _d3.blocs[0]["r"][2]
     check("un bloc de droite à gauche est collé au bord droit du bloc",
-          bool(_bbs) and abs(max(b[2] for b in _bbs) - _droit) < 26, (_bbs[:1], _droit))
+          bool(_bbs) and abs(max(b[2] for b in _bbs) - _droit) <= 10,
+          ([round(b[2], 1) for b in _bbs], round(_droit, 1)))
     check("  et l’arabe est bien écrit dans la page", bool(_bbs), _bbs[:1])
     _r3.close()
 

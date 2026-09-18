@@ -124,6 +124,11 @@ def translate(meta, items, started=None):
     """Traduit une liste de segments, sans rien garder ailleurs que le cache."""
     if not items:
         return {"translations": [], "translated": 0}
+    if not all(isinstance(t, str) for t in items):
+        raise StatelessError(
+            "« items » attend une liste de textes, dans l'ordre des segments "
+            "(le texte de chaque segment arrive tel quel, sans objet autour)."
+        )
     if len(items) > MAX_ITEMS:
         raise StatelessError(
             f"Trop de segments d'un coup ({len(items)} > {MAX_ITEMS})."

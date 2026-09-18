@@ -127,7 +127,7 @@ const files = blobs.slice(0, 2);
 const txts = await Promise.all(files.map(readBlob));
 check("le fichier téléchargé porte la traduction", txts.every((t) => t.trim().length > 10) && txts[0] !== alphaText && txts[1] !== betaText, JSON.stringify(txts.map((t) => t.slice(0, 60))));
 check("la structure du .txt est conservée (trois blocs)", txts[0].split(/\n\n+/).length === 3 && txts[1].split(/\n\n+/).length === 2, JSON.stringify(txts.map((t) => t.split(/\n\n+/).length)));
-check("deux noms de fichiers distincts", /alpha_traduit\.txt/.test(links[0].textContent) && /beta_traduit\.txt/.test(links[1].textContent), links.map((l) => l.textContent).join(" "));
+check("deux fichiers, chacun nommé comme à l’entrée", /alpha\.txt/.test(links[0].textContent) && /beta\.txt/.test(links[1].textContent), links.map((l) => l.textContent).join(" "));
 
 console.log("\n· ZIP fabriqué côté navigateur");
 const zip = doc.querySelector("#zipBtn");

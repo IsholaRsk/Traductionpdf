@@ -343,7 +343,7 @@ def main():
     for jid in ids_multi:
         wait(jid, quiet=True)
     blob_zip, disp = call("/api/zip?ids=" + ",".join(ids_multi))
-    check("  zip : deux entrée s", blob_zip[:2] == b"PK" and b"note_traduit.txt" in blob_zip, str(disp))
+    check("  zip : deux entrées, noms intacts", blob_zip[:2] == b"PK" and b"note.txt" in blob_zip, str(disp))
 
     # détection automatique de la langue source
     print("\n· detection automatique")

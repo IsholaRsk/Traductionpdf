@@ -154,7 +154,12 @@ class Doc:
     def preview_in(self):
         return "\n".join(s for s in self.original if s and s.strip())
 
-    def out_name(self, suffix="_traduit"):
+    def out_name(self, suffix=""):
+        """Le nom du fichier rendu : celui du fichier fourni, à l'identique.
+
+        Le site traduit, il ne renomme rien. `suffix` reste disponible pour les
+        cas où l'extension devrait changer (repli .txt d'un PDF sans PyMuPDF).
+        """
         root, ext = os.path.splitext(self.name)
         return f"{root}{suffix}{ext}"
 
@@ -295,7 +300,7 @@ class TextDoc(Doc):
             if re.search(r"\n{3,}", body):
                 body = re.sub(r"\n{3,}", "\n\n", body)
             body = aligner_fin(self.text, body)
-        return body.encode("utf-8"), self.out_name("_traduit"), self.preview_in(), body
+        return body.encode("utf-8"), self.out_name(), self.preview_in(), body
 
 
 class MarkdownDoc(Doc):
@@ -347,7 +352,7 @@ class MarkdownDoc(Doc):
         else:
             body = re.sub(r"\n{3,}", "\n\n", body)
         body = aligner_fin(self.text, body)
-        return body.encode("utf-8"), self.out_name("_traduit"), self.preview_in(), body
+        return body.encode("utf-8"), self.out_name(), self.preview_in(), body
 
 
 # --------------------------------------------------------------------------- #
@@ -418,7 +423,7 @@ class SubtitleDoc(Doc):
         body = "\n".join(out)
         body = re.sub(r"\n{3,}", "\n\n", body)
         body = aligner_fin(self.text, body)
-        return body.encode("utf-8"), self.out_name("_traduit"), self.preview_in(), body
+        return body.encode("utf-8"), self.out_name(), self.preview_in(), body
 
 
 # --------------------------------------------------------------------------- #
@@ -477,7 +482,7 @@ class JsonDoc(Doc):
             lines[line_no] = tr.strip()
             cur[key] = "\n".join(lines)
         body = json.dumps(data, ensure_ascii=False, indent=self.indent)
-        return body.encode("utf-8"), self.out_name("_traduit"), self.preview_in(), body
+        return body.encode("utf-8"), self.out_name(), self.preview_in(), body
 
 
 class CsvDoc(Doc):
@@ -532,7 +537,7 @@ class CsvDoc(Doc):
         writer = self._csv.writer(out, self.dialect)
         writer.writerows(rows)
         body = out.getvalue()
-        return body.encode("utf-8"), self.out_name("_traduit"), self.preview_in(), body
+        return body.encode("utf-8"), self.out_name(), self.preview_in(), body
 
 
 class HtmlDoc(Doc):
@@ -585,7 +590,7 @@ class HtmlDoc(Doc):
                 last = e
             out.append(self.text[last:])
             body = "".join(out)
-        return body.encode("utf-8"), self.out_name("_traduit"), self.preview_in(), body
+        return body.encode("utf-8"), self.out_name(), self.preview_in(), body
 
 
 class ConfigDoc(Doc):
@@ -635,7 +640,7 @@ class ConfigDoc(Doc):
                 out.append(f"{prefix}{quote}{value}{quote}".rstrip())
         body = "\n".join(out)
         body = aligner_fin(self.text, body)
-        return body.encode("utf-8"), self.out_name("_traduit"), self.preview_in(), body
+        return body.encode("utf-8"), self.out_name(), self.preview_in(), body
 
 
 class PoDoc(Doc):
@@ -692,7 +697,7 @@ class PoDoc(Doc):
                 lines[k] = '""'
         body = "\n".join(lines)
         body = aligner_fin(self.text, body)
-        return body.encode("utf-8"), self.out_name("_traduit"), self.preview_in(), body
+        return body.encode("utf-8"), self.out_name(), self.preview_in(), body
 
 
 # --------------------------------------------------------------------------- #
@@ -754,7 +759,7 @@ class OfficeDoc(Doc):
         out = io.BytesIO()
         self.document.save(out)
         body = "\n\n".join(t for t in translations if (t or "").strip())
-        return out.getvalue(), self.out_name("_traduit"), self.preview_in(), body
+        return out.getvalue(), self.out_name(), self.preview_in(), body
 
 
 class XlsxDoc(Doc):
@@ -790,7 +795,7 @@ class XlsxDoc(Doc):
         out = io.BytesIO()
         self.wb.save(out)
         body = "\n\n".join(t for t in translations if (t or "").strip())
-        return out.getvalue(), self.out_name("_traduit"), self.preview_in(), body
+        return out.getvalue(), self.out_name(), self.preview_in(), body
 
 
 def _mupdf():
@@ -817,19 +822,35 @@ def _echapper(texte):
 
 
 class PdfDoc(Doc):
-    """Traduction d'un PDF en PDF : même pagination, même empreinte de texte.
+    """Traduction d'un PDF en PDF : seule la langue change, le reste reste.
 
-    Le principe, celui des outils de traduction de documents : on *efface* chaque
-    bloc de texte d'origine (annotation de caviardage, images et tracés épargnés),
-    puis on repose sa traduction dans le rectangle exact du bloc, corps de police
-    d'origine et repli automatique si la langue prend plus de place.
+    Le principe est celui des outils de traduction de documents : le texte
+    d'origine est *effacé* (annotation de caviardage — images et tracés épargnés),
+    puis sa traduction est reposée **avec la police, le corps, la couleur,
+    l'interligne et l'alignement du bloc d'origine**, dans son rectangle.
 
-    Sans PyMuPDF, on retombe sur l'extraction texte seule — et on le dit.
+    La police est réutilisée quand c'est possible : le fichier de police embarqué
+    est extrait et réenregistré sur la page, à condition qu'il contienne les glyphes
+    de la langue d'arrivée (beaucoup de PDF n'embarquent qu'un sous-ensemble). Sinon
+    on prend l'équivalent Helvetica/Times/Courier — et le nombre de blocs concernés
+    est écrit noir sur blanc dans la note.
     """
 
     kind = "pdf"
     label = "PDF"
     note = ""
+
+    # polices de base PDF : si le document en emploie une, la réutiliser n'est
+    # pas une substitution, c'est la même police
+    _BASE14 = {
+        "helvetica": "helv", "helvetica-bold": "hebo", "helvetica-oblique": "heit",
+        "helvetica-boldoblique": "heobi", "arial": "helv", "arial-bold": "hebo",
+        "arial-italic": "heit", "arial-bolditalic": "heobi",
+        "times-roman": "tiro", "times-bold": "tibo", "times-italic": "tiit",
+        "times-bolditalic": "tiboi", "timesnewroman": "tiro", "timesnewroman-bold": "tibo",
+        "courier": "cour", "courier-bold": "cobo", "courier-oblique": "coit",
+        "courier-boldoblique": "coboi", "couriernew": "cour", "couriernew-bold": "cobo",
+    }
 
     def __init__(self, name, blob):
         super().__init__(name)
@@ -847,27 +868,44 @@ class PdfDoc(Doc):
             self.source = blob
             self.blocs = []
             for pno, page in enumerate(doc):
+                polices = self._polices_de_la_page(doc, page)
                 for block in page.get_text("dict")["blocks"]:
                     if block.get("type") != 0 or not block.get("lines"):
                         continue
                     x0, y0, x1, y1 = block["bbox"]
                     if x1 - x0 < 3 or y1 - y0 < 3:
                         continue
-                    spans = [sp for ln in block["lines"] for sp in ln.get("spans", ())]
+                    lignes = [ln for ln in block["lines"] if ln.get("spans")]
+                    spans = [sp for ln in lignes for sp in ln.get("spans", ())]
                     if not spans:
                         continue
                     texte = " ".join((sp.get("text") or "").strip() for sp in spans).strip()
                     if not texte:
                         continue
                     idx = self.add(texte)
+                    style = self._style_domine(spans)
                     self.blocs.append({
                         "u": idx, "p": pno, "r": (x0, y0, x1, y1),
-                        "t": max(5.0, min(max((sp.get("size") or 10) for sp in spans), 44.0)),
-                        "c": int(spans[0].get("color") or 0),
-                        # attributs de la police du premier span : graisse, italique,
-                        # famille — collés à l’original (flags PyMuPDF)
-                        "f": int(spans[0].get("flags") or 0),
+                        "t": style["t"], "c": style["c"], "f": style["f"], "n": style["n"],
+                        "x": self._xref_de_police(style["n"], polices)[0],
+                        "e": self._xref_de_police(style["n"], polices)[1],
+                        # géométrie des lignes : interligne et alignement d'origine
+                        "l": [tuple(ln["bbox"]) for ln in lignes],
+                        "nc": len(texte),
+                        "lh": self._interligne(lignes, style["t"]),
+                        "al": self._alignement(block["bbox"], lignes),
                     })
+            # un bloc plus grand que le corps le plus fréquent de sa page est un titre :
+            # on le laissera s'élargir plutôt que le casser en deux lignes
+            par_page = {}
+            for b in self.blocs:
+                poids = par_page.setdefault(b["p"], {})
+                poids[b["t"]] = poids.get(b["t"], 0) + b.get("nc", 1)
+            for b in self.blocs:
+                # le « corps de la page » est celui du bloc qui porte le plus de texte
+                poids = par_page[b["p"]]
+                corps = max(poids, key=lambda k: poids[k])
+                b["titre"] = b["t"] > corps + 0.4
         except Unsupported:
             raise
         except Exception as exc:  # noqa: BLE001
@@ -876,13 +914,94 @@ class PdfDoc(Doc):
             doc.close()
         if not self.todo:
             raise Unsupported("Aucun texte sélectionnable dans ce PDF (peut être un scan).")
-        self.label = "PDF"
         self.note = (
-            "PDF reconstruit page à page : le texte d’origine est effacé, sa traduction reposée "
-            "dans son rectangle — pagination, images, tracés, corps et graisse de police, et mise "
-            "en page conservés. Les polices sont substituées (Helvetica, Times, Courrier) : le "
-            "crénage peut légèrement bouger, le texte d’origine a disparu."
+            "PDF reconstruit page à page : texte d’origine effacé, traduction reposée dans le "
+            "rectangle du bloc, avec la police, le corps, la couleur, l’interligne et l’alignement "
+            "d’origine. Pagination, images et tracés intacts."
         )
+
+    # -- lecture ------------------------------------------------------------ #
+
+    @staticmethod
+    def _polices_de_la_page(doc, page):
+        """[(clé normalisée, xref, extension)] des polices déclarées par la page.
+
+        La clé est cherchée sur le nom de base *et* sur le nom de ressource : un même
+        fichier de police s'annonce « DejaVu Serif Book » dans le PDF et « DejaVuSerif »
+        dans le texte extrait, et c'est bien la même police.
+        """
+        out = []
+        try:
+            for xref, ext, _type, basefont, ressource, _enc in page.get_fonts():
+                for nom in (basefont, ressource):
+                    cle = re.sub(r"[^a-z0-9]", "", (nom or "").split("+")[-1].lower())
+                    if cle:
+                        out.append((cle, xref, ext))
+        except Exception:  # noqa: BLE001
+            pass
+        return out
+
+    @staticmethod
+    def _xref_de_police(nom_span, table):
+        base = re.sub(r"[^a-z0-9]", "", (nom_span or "").split("+")[-1].lower())
+        if not base:
+            return None, None
+        for cle, xref, ext in table:
+            if cle == base:
+                return xref, ext
+        for cle, xref, ext in table:      # « dejavuserif » ↔ « dejavuserifbook »
+            if len(base) > 3 and (base in cle or cle in base):
+                return xref, ext
+        return None, None
+
+    @staticmethod
+    def _style_domine(spans):
+        """Corps, couleur, graisse et nom de police du span le plus représenté."""
+        best, poids = None, -1
+        for sp in spans:
+            n = len((sp.get("text") or "").strip())
+            if n > poids:
+                poids, best = n, sp
+        sp = best or spans[0]
+        taille = float(sp.get("size") or 10)
+        return {"t": max(4.0, min(taille, 96.0)), "c": int(sp.get("color") or 0),
+                "f": int(sp.get("flags") or 0), "n": (sp.get("font") or "").strip()}
+
+    @staticmethod
+    def _interligne(lignes, corps):
+        """Rapport d'interligne mesuré sur le bloc d'origine (1.2 par défaut)."""
+        if len(lignes) < 2:
+            return 1.2
+        pas = []
+        for a, b in zip(lignes, lignes[1:]):
+            ea = (a.get("bbox") or (0, 0, 0, 0))[1]
+            eb = (b.get("bbox") or (0, 0, 0, 0))[1]
+            if eb > ea:
+                pas.append(eb - ea)
+        if not pas:
+            return 1.2
+        ratio = (max(pas) / max(corps, 1.0))
+        return min(2.2, max(0.9, round(ratio, 3)))
+
+    @staticmethod
+    def _alignement(bbox, lignes):
+        """0 à gauche, 1 centré, 2 à droite — déduit des lignes d'origine."""
+        if len(lignes) < 2:
+            return 0
+        bx0, _by0, bx1, _by1 = bbox
+        gauches = set(round((ln.get("bbox") or (0, 0, 0, 0))[0], 1) for ln in lignes)
+        droites = set(round((ln.get("bbox") or (0, 0, 0, 0))[2], 1) for ln in lignes)
+        centres = [((ln.get("bbox") or (0, 0, 0, 0))[0] + (ln.get("bbox") or (0, 0, 0, 0))[2]) / 2
+                   for ln in lignes]
+        milieu = (bx0 + bx1) / 2
+        if len(gauches) == 1 and len(droites) > 1:
+            return 0
+        if len(droites) == 1 and len(gauches) > 1:
+            return 2
+        if max(centres) - min(centres) < max(2.0, (bx1 - bx0) * 0.06) and \
+           all(abs(c - milieu) < max(3.0, (bx1 - bx0) * 0.08) for c in centres):
+            return 1
+        return 0
 
     def _texte_seul(self, blob):
         """Repli sans PyMuPDF : on lit le texte avec pypdf, la sortie est un fichier texte."""
@@ -918,57 +1037,184 @@ class PdfDoc(Doc):
         self.note = ("PyMuPDF n'est pas installé sur ce serveur : seul le texte est rendu, "
                      "en fichier .txt. Installez-le (pip install pymupdf) pour conserver la mise en page.")
 
+    # -- écriture ----------------------------------------------------------- #
+
+    @staticmethod
+    def _cle(nom):
+        return re.sub(r"[^a-z0-9]", "", (nom or "").split("+")[-1].lower())
+
+    def _police(self, m, doc, page, bloc, texte, cache):
+        """Le nom de police à utiliser pour reposer `texte`, en gardant l'original si possible.
+
+        Renvoie (nom, substituée) — `substituée` vaut True quand on a dû changer de police,
+        ce qui est dit dans la note plutôt que laissé deviner.
+        """
+        f = bloc.get("f") or 0
+        gras, italique = bool(f & 16), bool(f & 2)
+        mono, serif = bool(f & 8), bool(f & 4)
+        base = self._cle(bloc.get("n"))
+        if mono:
+            de_repli = "coboi" if (gras and italique) else "cobo" if gras else "coit" if italique else "cour"
+        elif serif:
+            de_repli = "tiboi" if (gras and italique) else "tibo" if gras else "tiit" if italique else "tiro"
+        else:
+            de_repli = "heobi" if (gras and italique) else "hebo" if gras else "heit" if italique else "helv"
+        # le document employait déjà une police de base : la reprendre n'est pas un changement,
+        # mais ces polices ne couvrent que le latin-1 — au-delà (arabe, cyrillique, grec, CJK),
+        # elles rendent des « ? » : c'est le moteur HTML qui composera le bloc.
+        cle = next((v for k, v in self._BASE14.items() if self._cle(k) == base), None)
+        if cle:
+            return cle, False, all(ord(c) <= 0xFF for c in texte)
+        xref = bloc.get("x")
+        if not xref:
+            return de_repli, True, False
+        cle_cache = (xref, tuple(sorted(set(texte))))
+        if cle_cache in cache:
+            return cache[cle_cache]
+        res = (de_repli, True, False)
+        try:
+            _nom, _ext, _type, buffer = doc.extract_font(xref)
+        except Exception:  # noqa: BLE001
+            buffer = None
+        if buffer:
+            try:
+                fonte = m.Font(fontbuffer=buffer)
+                complet = all(fonte.has_glyph(ord(c)) for c in set(texte) if not c.isspace())
+            except Exception:  # noqa: BLE001
+                complet = False
+            if complet:
+                nom_registre = f"TF{xref}"
+                try:
+                    page.insert_font(fontname=nom_registre, fontbuffer=buffer)
+                    res = (nom_registre, False, True)
+                except Exception:  # noqa: BLE001
+                    res = (de_repli, True, False)
+        cache[cle_cache] = res
+        return res
+
+    @staticmethod
+    def _rgb(couleur):
+        return [(couleur >> 16) & 255, (couleur >> 8) & 255, couleur & 255]
+
+    def _place(self, page, bloc, texte, doc, m, cache):
+        """Repose la traduction dans le bloc ; renvoie l'échelle utilisée (1.0 = aucune)."""
+        x0, y0, x1, y1 = bloc["r"]
+        alignements = {0: m.TEXT_ALIGN_LEFT, 1: m.TEXT_ALIGN_CENTER, 2: m.TEXT_ALIGN_RIGHT}
+        nom, _sub, couvert = self._police(doc=doc, page=page, bloc=bloc, texte=texte, m=m, cache=cache)
+        couleur = [v / 255 for v in self._rgb(bloc["c"])]
+        if _droitier(texte) or not couvert:      # écriture façonnée à la main par MuPDF
+            return self._compose(page, bloc, texte, m, aligne=True)
+        # d'abord le rectangle d'origine, puis la respiration jusqu'au bloc suivant
+        bas_page = page.rect.y1 - 18
+        suivants = [b["r"][1] for b in bloc.get("_suite", []) if b["r"][1] > y1 + 1]
+        bas = min([bas_page] + ([min(suivants) - 2] if suivants else []))
+        # trois respirations, dans l'ordre de ce qui abîme le moins la page : le rectangle
+        # d'origine ; la même colonne, plus basse ; la colonne élargie jusqu'à la marge.
+        # (quand le texte ne rentre pas, MuPDF n'écrit rien : pas de doublon à craindre)
+        # hauteur d'une ligne, mesurée sur le corps du bloc : MuPDF réclame un peu plus
+        # que corps × interligne, et refuse d'écrire sinon (le texte partait alors à la ligne)
+        une_ligne = min(bas, max(y1 + 2, y0 + bloc["t"] * (bloc.get("lh") or 1.2) * 1.25 + 3))
+        exact = m.Rect(x0, y0, max(x0 + 8, x1), une_ligne)
+        colonne = m.Rect(x0, y0, max(x0 + 8, x1), bas)
+        droit = max(x0 + 8, page.rect.x1 - 18)
+        large = m.Rect(x0, y0, droit, une_ligne)
+        large_bas = m.Rect(x0, y0, droit, bas)
+        if bloc.get("titre") or len(texte) <= 32:
+            # un titre se casse mal : on élargit la ligne avant de la multiplier
+            tentatives = ((exact, "place"), (large, "large"), (colonne, "colonne"), (large_bas, "large"))
+        else:
+            # un paragraphe garde sa largeur de colonne et respire vers le bas
+            tentatives = ((exact, "place"), (colonne, "colonne"), (large, "large"), (large_bas, "large"))
+        for rect, etat in tentatives:
+            try:
+                reste = page.insert_textbox(rect, texte, fontsize=bloc["t"], fontname=nom,
+                                            color=couleur, lineheight=bloc.get("lh") or 1.2,
+                                            align=alignements.get(bloc.get("al", 0), m.TEXT_ALIGN_LEFT))
+            except Exception:  # noqa: BLE001
+                continue
+            if reste >= 0:
+                return etat
+        # dernier recours : composition HTML, échelle bornée si le texte déborde
+        return self._compose(page, bloc, texte, m)
+
+    def _compose(self, page, bloc, texte, m, aligne=False):
+        """Le bloc est composé par le moteur HTML de MuPDF : il façonne l'arabe, l'hébreu,
+        le cyrillique et le CJK, là où les polices de base ne rendent que des « ? »."""
+        x0, y0, x1, y1 = bloc["r"]
+        bas_page = page.rect.y1 - 18
+        suivants = [b["r"][1] for b in bloc.get("_suite", []) if b["r"][1] > y1 + 1]
+        bas = min([bas_page] + ([min(suivants) - 2] if suivants else []))
+        gras = bool((bloc.get("f") or 0) & 16)
+        italique = bool((bloc.get("f") or 0) & 2)
+        famille = "monospace" if (bloc.get("f") or 0) & 8 else ("serif" if (bloc.get("f") or 0) & 4 else "sans-serif")
+        hexa = "#%02x%02x%02x" % tuple(self._rgb(bloc["c"]))
+        sens = " direction:rtl;" if _droitier(texte) else ""
+        css = (f'<div style="font-size:{bloc["t"]:.2f}pt;color:{hexa};font-family:{famille};'
+               f'{"font-weight:bold;" if gras else ""}{"font-style:italic;" if italique else ""}'
+               f'line-height:{bloc.get("lh") or 1.24};{sens}">{_echapper(texte)}</div>')
+        droit = max(x0 + 8, x1 if aligne else page.rect.x1 - 18)
+        try:
+            page.insert_htmlbox(m.Rect(x0, y0, droit, bas), css, scale_low=0.55)
+        except Exception:  # noqa: BLE001 - un bloc récalcitrant ne doit pas perdre le fichier
+            return "échec"
+        return "html" if aligne else "serre"
+
     def rebuild(self, translations):
         if not getattr(self, "blocs", None):
             body = "\n\n".join(t for t in translations if (t or "").strip())
-            nom = self.out_name("").rsplit(".", 1)[0] + "_traduit.txt"
-            return body.encode("utf-8"), nom, self.preview_in(), body
+            racine = self.out_name().rsplit(".", 1)[0]
+            return body.encode("utf-8"), racine + ".txt", self.preview_in(), body
 
         m = _mupdf()
         doc = m.open(stream=self.source, filetype="pdf")
         par_page = {}
         for bloc in self.blocs:
             par_page.setdefault(bloc["p"], []).append(bloc)
+        cache = {}
+        polices_origine = substituees = reduits = repos = composes = etires = 0
         for pno, blocs in par_page.items():
             page = doc[pno]
             # un bloc sans traduction ne doit pas laisser de trou : on ne le touche pas
             a_remplacer = [b for b in blocs if (translations[b["u"]] or "").strip()]
             if not a_remplacer:
                 continue
+            for i, b in enumerate(blocs):
+                b["_suite"] = blocs[i + 1:]        # pour mesurer la respiration sous le bloc
             for bloc in a_remplacer:
                 page.add_redact_annot(m.Rect(bloc["r"]))
             page.apply_redactions(images=m.PDF_REDACT_IMAGE_NONE, graphics=m.PDF_REDACT_LINE_ART_NONE)
             for bloc in a_remplacer:
                 texte = (translations[bloc["u"]] or "").strip()
-                x0, y0, x1, y1 = bloc["r"]
-                rect = m.Rect(x0, y0, max(x0 + 8, x1), max(y0 + 6, y1 + 2))
-                c = bloc["c"]
-                couleur = "#%02x%02x%02x" % ((c >> 16) & 255, (c >> 8) & 255, c & 255)
-                # attention : en rtl, text-align:right = bord de départ = gauche.
-                # `direction:rtl` seul aligne à droite, comme il faut.
-                sens = " direction:rtl;" if _droitier(texte) else ""
-                f = bloc.get("f") or 0
-                gras, italique = f & 16, f & 2
-                famille = "monospace" if f & 8 else ("serif" if f & 4 else "sans-serif")
-                html = (f'<div style="font-size:{bloc["t"]:.1f}pt;color:{couleur};'
-                        f'font-family:{famille};{"font-weight:bold;" if gras else ""}'
-                        f'{"font-style:italic;" if italique else ""}'
-                        f'line-height:1.24;{sens}">{_echapper(texte)}</div>')
-                try:
-                    page.insert_htmlbox(rect, html, scale_low=0.2)
-                except Exception:  # noqa: BLE001 - un bloc récalcitrant ne doit pas perdre le fichier
-                    try:
-                        page.insert_text((x0, y1 - 1), texte[:400], fontsize=bloc["t"],
-                                         fontname=("hebo" if gras else "helv"),
-                                         color=[v / 255 for v in ((c >> 16) & 255, (c >> 8) & 255, c & 255)])
-                    except Exception:  # noqa: BLE001
-                        pass
-        try:  # ne garder que les glyphes utilisés : le fichier reste léger
+                _nom, sub, _couv = self._police(doc=doc, page=page, bloc=bloc, texte=texte, m=m, cache=cache)
+                substituees += 1 if sub else 0
+                polices_origine += 0 if sub else 1
+                etat = self._place(page, bloc, texte, doc, m, cache)
+                repos += 1
+                composes += 1 if etat == "html" else 0
+                etires += 1 if etat in ("colonne", "large") else 0
+                reduits += 1 if etat in ("serre", "échec") else 0
+        for blocs in par_page.values():
+            for b in blocs:
+                b.pop("_suite", None)
+        try:  # on émonde les polices réenregistrées : le fichier ne grossit pas
             doc.subset_fonts()
         except Exception:  # noqa: BLE001
             pass
         out = doc.tobytes(deflate=True, garbage=4)
-        nom = self.out_name("_traduit")
+        nom = self.out_name()
+        details = f"{polices_origine} bloc(s) sur {repos} écrits avec la police du document"
+        if substituees:
+            details += f", {substituees} avec l’équivalent Helvetica/Times/Courier (police embarquée en sous-ensemble incomplet)"
+        if composes:
+            details += (f" ; {composes} bloc(s) façonnés par le moteur HTML (écriture de droite à "
+                        "gauche ou hors latin-1), corps et couleur d’origine conservés")
+        if etires:
+            details += f" ; {etires} bloc(s) ont dû respirer sous (ou à droite de) leur rectangle, la langue étant plus longue"
+        if reduits:
+            details += f" ; {reduits} bloc(s) recomposés faute de place au corps d’origine"
+        self.note = ("PDF reconstruit page à page : texte d’origine effacé, traduction reposée dans son "
+                     "rectangle au corps et à la couleur d’origine, interligne et alignement mesurés sur "
+                     f"le bloc. Pagination, images et tracés intacts. {details}.")
         return out, nom, self.preview_in(), "\n\n".join(t for t in translations if (t or "").strip())
 
 

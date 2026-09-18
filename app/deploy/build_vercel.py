@@ -75,6 +75,11 @@ def build():
     shutil.copy2(os.path.join(ROOT, "deploy", "shim.py"), os.path.join(api, "index.py"))
     with open(os.path.join(pub, "index.html"), "w", encoding="utf-8") as fh:
         fh.write(inline_page())
+    # le favicon est déjà collé dans la page en data URI ; ce fichier sert aux
+    # navigateurs et aux raccourcis qui demandent une adresse
+    favot = os.path.join(ROOT, "web", "favicon.svg")
+    if os.path.exists(favot):
+        shutil.copy2(favot, os.path.join(pub, "favicon.svg"))
 
     with open(os.path.join(OUT, "requirements.txt"), "w", encoding="utf-8") as fh:
         fh.write(REQUIREMENTS)

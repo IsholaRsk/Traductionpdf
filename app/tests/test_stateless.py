@@ -111,7 +111,7 @@ for n, v in enumerate(tr.get("translations", [])):
 status, built = post("/api/build", {"meta": META, "file": B64, "translations": trans})
 check("réponse 200", status == 200, built)
 out = base64.b64decode(built["b64"]).decode("utf-8") if "b64" in built else ""
-check("le fichier porte un nouveau nom", built.get("name") == "port_traduit.txt", built.get("name"))
+check("le fichier rendu porte le nom d’origine", built.get("name") == "port.txt", built.get("name"))
 check("la structure en trois blocs est conservée", len([b for b in out.split("\n\n") if b.strip()]) == 3, repr(out[:120]))
 check("l'aperçu collé au fichier est fourni", built.get("out") and built.get("in"), str(built)[:120])
 
@@ -156,6 +156,11 @@ plan2 = get("/api/meta")
 check("aucune file de tâches côté serveur n'est nécessaire (cache seul)", "jobs" not in json.dumps(plan2), "surveillances")
 status, again = post("/api/open", {"meta": META, "file": B64})
 check("le même fichier rouvre à l'identique", again.get("count") == plan["count"], again.get("count"))
+
+print("\n· entrées mal formées : un message clair, pas une exception qui fuit")
+status, mauvais = post("/api/translate", {"meta": META, "items": [{"t": "Bonjour"}]})
+check("un lot d'objets au lieu de textes est refusé", status == 400, (status, mauvais))
+check("  et le message dit quoi envoyer", "liste de textes" in (mauvais.get("error") or ""), mauvais)
 
 print("\n" + (f"ÉCHECS {len(failures)}/{checks} : " + ", ".join(failures) if failures else f"tout est bon ({checks} vérifications)"))
 sys.exit(1 if failures else 0)

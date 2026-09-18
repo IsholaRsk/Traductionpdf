@@ -118,6 +118,12 @@ doc.querySelector("#settingsSave").dispatchEvent(new win.MouseEvent("click", { b
 await until(() => doc.querySelector("#settings").hidden);
 check("réglages fermés après enregistrement", doc.querySelector("#settings").hidden);
 check("puce du moteur mise à jour", /DeepL/.test(doc.querySelector("#engineChipLabel").textContent), doc.querySelector("#engineChipLabel").textContent);
+const marque = doc.querySelector("#brandMark");
+check("logo : marque redessinée présente dans l’en-tête", !!marque && (marque.getAttribute("viewBox") === "0 0 32 32"), marque && marque.getAttribute("viewBox"));
+check("logo : l’ancien pont de « Passerelle » a disparu", !/c6-12 22-12/.test(doc.querySelector(".brand").innerHTML), "");
+const icone = doc.head.querySelector('link[rel="icon"]');
+const hrefIcone = (icone && icone.getAttribute("href")) || "";
+check("logo : favicon embarqué en data URI (rien à charger)", /^data:image\/svg\+xml,/.test(hrefIcone), hrefIcone.slice(0, 46));
 check("clé conservée localement", JSON.parse(win.localStorage.getItem("tradfilez.settings.v1")).deepl.api_key === "demo-key-sans-valeur", win.localStorage.getItem("tradfilez.settings.v1"));
 
 // on remet le moteur automatique pour la traduction

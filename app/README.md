@@ -143,9 +143,15 @@ une part visible de tes 1 000 000 caractères mensuels.
 
 (plus toute extension texte inconnue, traitée comme du `.txt`).
 
-Un aller-retour garde **la forme du fichier** : extension, pagination, horodatages,
-feuilles, balises et mise en page — le PDF est caviardé puis recompillé à la même
-place, jamais converti en `.txt`. Seule l'écriture change.
+Un aller-retour ne change **que la langue**. Le fichier rendu porte le nom exact du
+fichier fourni (pas de `_traduit` ajouté), la même extension, et à l'intérieur :
+pagination, horodatages de sous-titres, nombres, formules, balises, feuilles et
+largeurs de colonnes intacts. Le PDF est caviardé bloc par bloc puis recompilé
+**dans le rectangle d'origine, avec la police extraite du fichier lui-même** (corps,
+graisse, couleur, interligne et alignement mesurés sur le bloc) ; si l'embarqué du
+document n'est qu'un sous-ensemble sans les glyphes de la langue d'arrivée, l'équivalent
+base-14 est employé et le nombre de blocs concernés est écrit dans la note. Aucun
+fichier n'est jamais converti en `.txt` quand la mise en page peut être rendue.
 
 Refus explicite et en français pour `.doc .odt .rtf .pptx .epub` et les binaires — avec la
 suggestion du contournement (enregistrer en `.docx`, ou coller dans l'onglet Texte).
@@ -205,15 +211,15 @@ Cinq suites, du plus proche du métal au plus proche du visiteur :
 
 ```bash
 cd app
-python3 tests/test_formats.py              # 74 garde-fous de structure, hors-ligne
+python3 tests/test_formats.py              # 79 garde-fous de structure, hors-ligne
 python3 tests/test_engines.py              # 43 vérifications hors-ligne : requêtes, codes de
                                            # langue, hôtes, file de replis (aucun appel réseau)
 python3 server.py --port 8123 &            # serveur de test (mode file d'attente)
-python3 tests/test_api.py mymemory fr en   # 104 vérifications : cycle complet, formats réels
+python3 tests/test_api.py mymemory fr en   # 103 vérifications : cycle complet, formats réels
 python3 tests/check_failures.py 8123       # repli entre moteurs, quota, erreurs, annulation
 
 TRADFILEZ_STATELESS=1 TRADFILEZ_DIR=/tmp/pl python3 server.py --port 8011 &
-python3 tests/test_stateless.py http://127.0.0.1:8011   # 31 : API sans état + parité avec le job
+python3 tests/test_stateless.py http://127.0.0.1:8011   # 33 : API sans état + parité avec le job
 ```
 
 Les deux suites d'interface pilotent la vraie page (nécessitent `npm install jsdom`, et
@@ -221,7 +227,7 @@ Chrome headless pour les captures) :
 
 ```bash
 cd tests/navigateur && npm install jsdom
-node ui.test.mjs http://127.0.0.1:8123          # 41 : parcours complet, réglages, langues RTL, reprise des clés déjà saisies
+node ui.test.mjs http://127.0.0.1:8123          # 44 : parcours complet, réglages, langues RTL, reprise des clés déjà saisies
 node stateless.test.mjs http://127.0.0.1:8011   # 33 : mode sans état, ZIP du navigateur, annulation
 node shots.mjs http://127.0.0.1:8000             # captures PNG dans tests/navigateur/rendu/
 ```
@@ -230,7 +236,7 @@ node shots.mjs http://127.0.0.1:8000             # captures PNG dans tests/navig
 visiteur, chez lui, obtient bien un fichier traduit :
 
 ```bash
-node stateless.test.mjs https://tradfilez.vercel.app
+python3 tests/verif_prod.py https://tradfilez.vercel.app   # 12 : nom exact, format, polices, tracés, note, en ligne
 ```
 
 ## Limites assumées
