@@ -374,6 +374,10 @@ ENGINE_FIELDS = {
 
 
 def engine_catalog(config):
+    # les défauts posés par l'hébergeur comptent ici, pour que le badge « clé reconnue »
+    # soit honnête ; seules les étiquettes et les champs vides du formulaire repartent au
+    # navigateur — une clé saisie côté serveur n'est jamais renvoyée.
+    config = eng.with_defauts_env(config)
     out = [{
         "id": "auto", "label": "Automatique", "needsKey": False, "ready": True,
         "hint": "Le meilleur moteur configuré, avec bascule automatique en cas de quota atteint.",

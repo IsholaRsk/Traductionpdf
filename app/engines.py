@@ -725,9 +725,37 @@ ENGINES = {
 FREE_ORDER = [DeepLEngine.id, OpenAICompatEngine.id, MyMemoryEngine.id]
 
 
+# Un hébergeur peut recevoir une clé une fois pour toutes : les réglages du visiteur
+# gardent la main, l'environnement ne fait que combler les trous. La clé ne repart
+# jamais vers le navigateur — elle ne sert qu'à construire la requête sortante.
+DEFAUTS_ENV = {
+    "deepl": {"api_key": "deepl_key", "base_url": "deepl_base"},
+    "llm": {"api_key": "llm_key", "base_url": "llm_base", "model": "llm_model"},
+    "mymemory": {"email": "mymemory_email"},
+    "libretranslate": {"base_url": "libretranslate_base", "api_key": "libretranslate_key"},
+}
+
+
+def with_defauts_env(config):
+    """Complète une config vide par ce que pose l'hébergeur dans l'environnement."""
+    out = dict(config or {})
+    for eid, champs in DEFAUTS_ENV.items():
+        regle = dict(out.get(eid) or {})
+        for champ, nom in champs.items():
+            if not str(regle.get(champ) or "").strip():
+                valeur = (env(nom, "") or "").strip()
+                if valeur:
+                    regle[champ] = valeur
+        if regle:
+            out[eid] = regle
+    if not str(out.get("engine") or "").strip() and (env("engine", "") or "").strip():
+        out["engine"] = env("engine").strip()
+    return out
+
+
 def build_engines(config):
     """Chaîne de moteurs à essayer, du préféré aux replis."""
-    config = dict(config or {})
+    config = with_defauts_env(config)
     shared = {k: config.get(k) for k in ("tone", "glossary") if config.get(k)}
     made = {}
     for eid, cls in ENGINES.items():

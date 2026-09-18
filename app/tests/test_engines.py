@@ -91,6 +91,34 @@ check("ton et consignes transmis au moteur choisi",
       partage[0].config.get("tone") == "soutenu" and partage[0].config.get("glossary") == "vouvoyer",
       partage[0].config)
 
+print("\n· clé posée par l'hébergeur (variables d'environnement du déploiement)")
+os.environ["TRADFILEZ_DEEPL_KEY"] = "01234567-89ab-cdef-0123-456789abcdef:fx"
+os.environ["TRADFILEZ_LLM_MODEL"] = "gemini-2.0-flash"
+try:
+    chaine = eng.build_engines({})
+    check("la clé de l'hébergeur met DeepL dans la chaîne", "deepl" in [e.id for e in chaine],
+          [e.id for e in chaine])
+    check("et le choix automatique le place en tête", [e.id for e in chaine][0] == "deepl",
+          [e.id for e in chaine])
+    check("la clé rejoint bien le réglage du moteur",
+          eng.with_defauts_env({})["deepl"]["api_key"].endswith(":fx"), eng.with_defauts_env({}))
+    check("le modèle de l'IA se règle aussi par environnement",
+          eng.OpenAICompatEngine(eng.with_defauts_env({})["llm"]).model == "gemini-2.0-flash")
+    visiteur = eng.build_engines({"engine": "mymemory", "mymemory": {}})
+    check("un visiteur qui choisit MyMemory garde son choix",
+          [e.id for e in visiteur][0] == "mymemory", [e.id for e in visiteur])
+    os.environ["TRADFILEZ_LLM_KEY"] = "sk-test"
+    os.environ["TRADFILEZ_ENGINE"] = "llm"
+    check("TRADFILEZ_ENGINE impose le moteur par défaut",
+          [e.id for e in eng.build_engines({})][0] == "llm", [e.id for e in eng.build_engines({})])
+    del os.environ["TRADFILEZ_LLM_KEY"]
+    check("un moteur laissé à moitié configuré n'entre pas dans la chaîne",
+          "llm" not in [e.id for e in eng.build_engines({})], [e.id for e in eng.build_engines({})])
+finally:
+    del os.environ["TRADFILEZ_DEEPL_KEY"], os.environ["TRADFILEZ_LLM_MODEL"]
+check("environnement nettoyé, DeepL disparaît de la chaîne",
+      "deepl" not in [e.id for e in eng.build_engines({})], [e.id for e in eng.build_engines({})])
+
 print("\n· variables d'environnement, ancien nom compris")
 os.environ["TRADFILEZ_WINDOW"] = "17"
 os.environ["PASSERELLE_WINDOW_CHARS"] = "999"

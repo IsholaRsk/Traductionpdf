@@ -263,7 +263,13 @@ def main():
     meta, _ = call("/api/meta")
     check("/api/meta repond", bool(meta.get("engines")), str(meta)[:160])
     ids = {e["id"]: e for e in meta["engines"]}
-    check("  moteur demande disponible", ids.get(ENGINE, {}).get("ready", ENGINE == "auto"), str(ids.get(ENGINE)))
+    demande = ids.get(ENGINE, {})
+    check("  moteur demandé déclaré au navigateur",
+          ENGINE in ids and isinstance(demande.get("ready"), bool), str(demande)[:160])
+    if demande.get("needsKey") and not demande.get("ready"):
+        print("    (ce serveur de test n'a pas de clé %s — ni TRADFILEZ_%s_KEY dans son"
+              " environnement : la suite tourne donc sur le repli, et vérifie quand même la"
+              " chaîne)" % (ENGINE, ENGINE.upper()))
     check("  limites annoncees", meta["limits"]["maxUpload"] == 8 * 1024 * 1024, str(meta["limits"]))
 
     samples = {

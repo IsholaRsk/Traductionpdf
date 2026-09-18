@@ -116,6 +116,27 @@ courriel) DeepL suffit et coûte moins cher en quota. Pour un fichier où la mis
 et la fidélité du ton importent (littérature, texte marketing, PDF dense), le moteur IA
 Gemini/Groq est meilleur — il reçoit les consignes de ton et le glossaire.
 
+### Clé posée par l'hébergeur (partager sa clé avec tous les visiteurs)
+
+Par défaut chaque visiteur colle sa clé dans ⚙ Réglages et elle ne quitte pas son
+navigateur. Le propriétaire du déploiement peut aussi en poser une pour tout le monde :
+`engines.with_defauts_env()` comble les trous d'une config avec ces variables
+d'environnement (un réglage saisi dans le navigateur reste prioritaire, et la clé n'est
+jamais renvoyée au navigateur — seule la requête sortante la signe) :
+
+    TRADFILEZ_DEEPL_KEY            clé DeepL (le suffixe `:fx` choisit api-free.deepl.com)
+    TRADFILEZ_DEEPL_BASE           URL de l'API, si un relais est nécessaire
+    TRADFILEZ_LLM_KEY              clé du point compatible OpenAI
+    TRADFILEZ_LLM_BASE             ex. https://generativelanguage.googleapis.com/v1beta/openai/
+    TRADFILEZ_LLM_MODEL            ex. gemini-2.0-flash
+    TRADFILEZ_MYMEMORY_EMAIL       e-mail qui multiplie par dix le quota MyMemory
+    TRADFILEZ_LIBRETRANSLATE_BASE  instance auto-hébergée
+    TRADFILEZ_ENGINE               moteur imposé par défaut (deepl, llm, mymemory…)
+
+Chez Vercel : `vercel env add TRADFILEZ_DEEPL_KEY production`, puis redéployer. À peser :
+le quota devient **commun** — un seul gros fichier d'un visiteur anonyme peut consommer
+une part visible de tes 1 000 000 caractères mensuels.
+
 ## Formats acceptés
 
 `.txt .md .rst .srt .vtt .csv .tsv .json .html .xml .yml .yaml .toml .ini .po .docx .xlsx .pdf`
@@ -185,10 +206,10 @@ Cinq suites, du plus proche du métal au plus proche du visiteur :
 ```bash
 cd app
 python3 tests/test_formats.py              # 74 garde-fous de structure, hors-ligne
-python3 tests/test_engines.py              # 35 vérifications hors-ligne : requêtes, codes de
+python3 tests/test_engines.py              # 43 vérifications hors-ligne : requêtes, codes de
                                            # langue, hôtes, file de replis (aucun appel réseau)
 python3 server.py --port 8123 &            # serveur de test (mode file d'attente)
-python3 tests/test_api.py mymemory fr en   # 103 vérifications : cycle complet, formats réels
+python3 tests/test_api.py mymemory fr en   # 104 vérifications : cycle complet, formats réels
 python3 tests/check_failures.py 8123       # repli entre moteurs, quota, erreurs, annulation
 
 TRADFILEZ_STATELESS=1 TRADFILEZ_DIR=/tmp/pl python3 server.py --port 8011 &
